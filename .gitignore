@@ -1,0 +1,28 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet
+*.nupkg
+packages/
+
+# OS noise
+Thumbs.db
+Desktop.ini
+
+# Local agent/workspace files
+.agent/
+.agents/
+.codex/
+skills/
+AGENTS.md
+AGENTS_CODEX.md
+GEMINI.md

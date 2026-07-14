@@ -1,0 +1,361 @@
+﻿<Window x:Class="Ch34xProgrammer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="CH34x Programmer" Height="620" Width="940"
+        MinHeight="620" MinWidth="940"
+        FontFamily="Segoe UI" FontSize="13"
+        Background="{DynamicResource AppBackgroundBrush}"
+        Foreground="{DynamicResource TextBrush}">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="MinWidth" Value="30"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        </Style>
+        <Style TargetType="ToggleButton">
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="MinWidth" Value="52"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Margin" Value="0,3,0,8"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Margin" Value="0,3,0,8"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        </Style>
+        <Style TargetType="GroupBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        </Style>
+        <Style TargetType="Menu">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+        </Style>
+        <Style TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        </Style>
+        <Style TargetType="TabControl">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBackgroundBrush}"/>
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource PanelBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabItem}">
+                        <Border x:Name="TabBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1,1,1,0"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header"
+                                              RecognizesAccessKey="True"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceBackgroundBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="StatusBar">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+        </Style>
+        <Style TargetType="StatusBarItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem x:Name="FileMenu" Header="_File">
+                <MenuItem x:Name="NewMenuItem" Header="New" Click="FillFF_Click"/>
+                <Separator/>
+                <MenuItem x:Name="OpenMenuItem" Header="Open" Click="LoadFile_Click"/>
+                <MenuItem x:Name="SaveMenuItem" Header="Save" Click="SaveFile_Click"/>
+                <Separator/>
+                <MenuItem x:Name="ExitMenuItem" Header="Exit" Click="Exit_Click"/>
+            </MenuItem>
+            <MenuItem x:Name="IcMenu" Header="_IC">
+                <MenuItem x:Name="SearchIcMenuItem" Header="Search" Click="SearchIc_Click"/>
+                <MenuItem x:Name="ReadIdMenuItem" Header="Detect" Click="ReadId_Click"/>
+            </MenuItem>
+            <MenuItem x:Name="HardwareMenu" Header="_Programmer">
+                <MenuItem x:Name="DetectProgrammerMenuItem" Header="Detect" Click="Detect_Click"/>
+            </MenuItem>
+            <MenuItem x:Name="ScriptsMenu" Header="_Scripts">
+                <MenuItem x:Name="ReadVerifyScriptMenuItem" Header="Read + Verify" Tag="Read + verify" Click="RunScript_Click"/>
+                <MenuItem x:Name="EraseWriteVerifyScriptMenuItem" Header="Erase + Write + Verify" Tag="Erase + write + verify" Click="RunScript_Click"/>
+            </MenuItem>
+            <MenuItem x:Name="HelpMenu" Header="_Help">
+                <MenuItem x:Name="AboutMenuItem" Header="About" Click="About_Click"/>
+            </MenuItem>
+        </Menu>
+
+        <ToolBarTray DockPanel.Dock="Top" Background="{DynamicResource ToolbarBackgroundBrush}">
+            <ToolBar Height="36" ToolBarTray.IsLocked="True">
+                <ToolBar.Resources>
+                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Setter Property="Margin" Value="6,2"/>
+                        <Setter Property="Padding" Value="8,3"/>
+                        <Setter Property="Height" Value="28"/>
+                    </Style>
+                    <Style TargetType="Separator">
+                        <Setter Property="Margin" Value="8,0"/>
+                    </Style>
+                </ToolBar.Resources>
+                <ToolBar.Template>
+                    <ControlTemplate TargetType="{x:Type ToolBar}">
+                        <Border Background="{TemplateBinding Background}" Padding="6,0,0,0">
+                            <StackPanel IsItemsHost="True" Orientation="Horizontal"/>
+                        </Border>
+                    </ControlTemplate>
+                </ToolBar.Template>
+                <Button x:Name="NewButton" ToolTip="New buffer" Click="FillFF_Click">New</Button>
+                <Button x:Name="OpenButton" ToolTip="Open binary file" Click="LoadFile_Click">Open</Button>
+                <Button x:Name="SaveButton" ToolTip="Save binary file" Click="SaveFile_Click">Save</Button>
+                <Separator/>
+                <Button x:Name="SearchIcButton" ToolTip="Search IC catalog" Click="SearchIc_Click">Search</Button>
+                <Button x:Name="ReadIdButton" ToolTip="Read chip ID and choose IC" Click="ReadId_Click">Detect</Button>
+                <Button x:Name="ReadButton" ToolTip="Read chip to buffer" Click="ReadChip_Click">Read</Button>
+                <Button x:Name="WriteButton" ToolTip="Write buffer to chip" Click="WriteChip_Click">Write</Button>
+                <Button x:Name="VerifyButton" ToolTip="Verify chip against buffer" Click="Verify_Click">Verify</Button>
+                <Button x:Name="EraseButton" ToolTip="Erase chip" Click="Erase_Click">Erase</Button>
+                <Separator/>
+                <Button x:Name="UsbButton" ToolTip="Detect programmer" Click="Detect_Click">Programmer</Button>
+                <Button x:Name="StopButton" ToolTip="Stop current operation" Click="Stop_Click" Background="{DynamicResource StopBackgroundBrush}" Foreground="{DynamicResource StopForegroundBrush}">STOP</Button>
+                <Separator/>
+                <ToggleButton x:Name="ThemeToggleButton" ToolTip="Toggle dark mode" Checked="ThemeToggleButton_Toggled" Unchecked="ThemeToggleButton_Toggled">Dark</ToggleButton>
+            </ToolBar>
+        </ToolBarTray>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" MinHeight="220"/>
+                <RowDefinition Height="5"/>
+                <RowDefinition Height="260" MinHeight="120"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="270"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Row="0" Grid.Column="0" Grid.RowSpan="3"
+                    Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+                <StackPanel Margin="8,8,8,0">
+                    <GroupBox x:Name="DeviceGroup" Header="Device" Padding="6" Margin="0,0,0,6">
+                        <StackPanel>
+                            <TextBox x:Name="DeviceNameBox" Height="26" IsReadOnly="True" Text=""/>
+
+                            <Grid Margin="2,8,2,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="72"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="26"/>
+                                    <RowDefinition Height="26"/>
+                                    <RowDefinition Height="26"/>
+                                    <RowDefinition Height="32"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock x:Name="TypeLabel" Grid.Row="0" Grid.Column="0" Text="Type:" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="DeviceTypeText" Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="BitSizeLabel" Grid.Row="1" Grid.Column="0" Text="BitSize:" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="BitSizeText" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="ManufacturerLabel" Grid.Row="2" Grid.Column="0" Text="Manuf:" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="ManufacturerText" Grid.Row="2" Grid.Column="1" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="SizeLabel" Grid.Row="3" Grid.Column="0" Text="Size:" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBox x:Name="DeviceSizeBox" Width="104" Height="24" IsReadOnly="True" Text="Chip size"/>
+                                    <TextBlock x:Name="BytesLabel" Text=" Bytes" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox x:Name="OperationGroup" Header="Operation" Padding="6" Margin="0,0,0,6">
+                        <StackPanel>
+                            <TextBlock x:Name="StartAddressLabel" Text="Start address"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="0x" VerticalAlignment="Center" Margin="0,0,4,7"/>
+                                <TextBox x:Name="StartAddressBox" Width="92" Text="000000"/>
+                            </StackPanel>
+                            <TextBlock x:Name="HardwareStatusText" Text="Programmer: not detected"/>
+                            <TextBlock x:Name="BufferStatusText" Text="Buffer: 0 bytes" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <ComboBox x:Name="ChipCombo" Visibility="Collapsed" SelectionChanged="ChipCombo_SelectionChanged"/>
+                    <ComboBox x:Name="SizeCombo" Visibility="Collapsed" SelectionChanged="SizeCombo_SelectionChanged"/>
+                    <ComboBox x:Name="PageCombo" Visibility="Collapsed"/>
+                    <ComboBox x:Name="CommandCombo" Visibility="Collapsed"/>
+                </StackPanel>
+            </Border>
+
+            <TabControl Grid.Row="0" Grid.Column="1" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,1,1">
+                <TabItem x:Name="MainMemoryTab" Header="Main Memory">
+                    <Grid Background="{DynamicResource SurfaceBackgroundBrush}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="19"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <DockPanel Grid.Row="0" Background="{DynamicResource SubtleBackgroundBrush}">
+                            <TextBlock DockPanel.Dock="Left" Width="94" Text=" " Background="{DynamicResource PanelBackgroundBrush}"/>
+                            <TextBlock Text="00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F    0123456789ABCDEF"
+                                       FontFamily="Consolas" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </DockPanel>
+
+                        <DataGrid x:Name="HexGrid" Grid.Row="1"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  HeadersVisibility="None"
+                                  GridLinesVisibility="Horizontal"
+                                  RowHeaderWidth="0"
+                                  RowHeight="18"
+                                  MinRowHeight="18"
+                                  FontFamily="Consolas"
+                                  FontSize="10"
+                                  Background="{DynamicResource SurfaceBackgroundBrush}"
+                                  Foreground="{DynamicResource TextBrush}"
+                                  HorizontalGridLinesBrush="{DynamicResource GridLineBrush}"
+                                  VerticalGridLinesBrush="{DynamicResource LightGridLineBrush}"
+                                  BorderBrush="{DynamicResource SplitterBrush}"
+                                  AlternatingRowBackground="{DynamicResource AlternateRowBackgroundBrush}"
+                                  SelectionUnit="Cell"
+                                  EnableRowVirtualization="True"
+                                  EnableColumnVirtualization="True">
+                            <DataGrid.Resources>
+                                <Style TargetType="{x:Type DataGridRow}">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                    <Setter Property="Background" Value="{DynamicResource SurfaceBackgroundBrush}"/>
+                                </Style>
+                                <Style TargetType="{x:Type DataGridCell}">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                    <Setter Property="Background" Value="{DynamicResource SurfaceBackgroundBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource LightGridLineBrush}"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource SelectionBackgroundBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource SelectionForegroundBrush}"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                                <Style TargetType="{x:Type TextBlock}">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                </Style>
+                                <Style TargetType="{x:Type TextBox}">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                    <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                </Style>
+                            </DataGrid.Resources>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Binding="{Binding Address}" IsReadOnly="True" Width="88">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Background" Value="{DynamicResource AddressBackgroundBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AddressForegroundBrush}"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="TextAlignment" Value="Right"/>
+                                            <Setter Property="Padding" Value="2"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Binding="{Binding B0, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding B1, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding B2, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding B3, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding B4, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding B5, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding B6, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding B7, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding B8, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding B9, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding BA, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding BB, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding BC, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding BD, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding BE, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding BF, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Width="24"/>
+                                <DataGridTextColumn Binding="{Binding Ascii}" IsReadOnly="True" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+
+            <GridSplitter Grid.Row="1" Grid.Column="1"
+                          Height="5"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Background="{DynamicResource SplitterBrush}"
+                          ShowsPreview="True"
+                          ResizeDirection="Rows"
+                          ResizeBehavior="PreviousAndNext"/>
+
+            <Grid Grid.Row="2" Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="28"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StatusBar Grid.Row="0">
+                    <StatusBarItem>
+                        <TextBlock x:Name="SizeStatusText" Text="Size: 0"/>
+                    </StatusBarItem>
+                    <Separator/>
+                    <StatusBarItem>
+                        <ProgressBar x:Name="OperationProgress" Width="210" Height="14" Minimum="0" Maximum="100" Background="{DynamicResource ProgressTrackBrush}"/>
+                    </StatusBarItem>
+                <StatusBarItem>
+                    <TextBlock x:Name="OperationStatusText" Text="Ready"/>
+                </StatusBarItem>
+                <StatusBarItem HorizontalAlignment="Right">
+                    <TextBlock x:Name="VersionStatusText"/>
+                </StatusBarItem>
+            </StatusBar>
+
+                <TextBox x:Name="LogBox" Grid.Row="1"
+                         Height="Auto"
+                         Margin="0"
+                         FontFamily="Consolas" FontSize="12"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Auto"
+                         IsReadOnly="True"
+                         TextWrapping="NoWrap"
+                         Background="{DynamicResource SurfaceBackgroundBrush}"
+                         Foreground="{DynamicResource TextBrush}"/>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>
