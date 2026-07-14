@@ -292,8 +292,9 @@ public partial class MainWindow : Window
         await RunOperationAsync("Write chip", _buffer.Length, async progress =>
         {
             var startAddress = ParseStartAddress();
-            AppendLog($"Write request: {FormatBytes(_buffer.Length)} to 0x{startAddress:X6}.");
-            await _programmer.WriteAsync(CurrentChip(), startAddress, _buffer, progress);
+            var skipBlankPages = SkipBlankPagesCheckBox.IsChecked == true;
+            AppendLog($"Write request: {FormatBytes(_buffer.Length)} to 0x{startAddress:X6}{(skipBlankPages ? " (skip FF pages)" : "")}.");
+            await _programmer.WriteAsync(CurrentChip(), startAddress, _buffer, progress, skipBlankPages);
         });
     }
 
@@ -470,7 +471,7 @@ public partial class MainWindow : Window
 
             AppendLog($"Script request: erase, write and verify {FormatBytes(_buffer.Length)} at 0x{startAddress:X6}.");
             await _programmer.EraseAsync(chip, progress);
-            await _programmer.WriteAsync(chip, startAddress, _buffer, progress);
+            await _programmer.WriteAsync(chip, startAddress, _buffer, progress, skipBlankPages: true);
             var ok = await _programmer.VerifyAsync(chip, startAddress, _buffer, progress);
             AppendLog(ok ? "Script completed: verify OK." : "Script completed: verify failed.");
         });
@@ -983,7 +984,7 @@ public interface IChipProgrammer
     Task<bool> DetectAsync(IProgress<int> progress);
     Task<byte[]> ReadIdAsync(ChipProfile chip, IProgress<int> progress);
     Task<byte[]> ReadAsync(ChipProfile chip, int startAddress, int length, IProgress<int> progress);
-    Task WriteAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress);
+    Task WriteAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress, bool skipBlankPages = false);
     Task<bool> VerifyAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress);
     Task EraseAsync(ChipProfile chip, IProgress<int> progress);
 }
@@ -1074,12 +1075,12 @@ public sealed class Ch347NativeProgrammer : IChipProgrammer
         return result;
     });
 
-    public Task WriteAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress) => Task.Run(async () =>
+    public Task WriteAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress, bool skipBlankPages = false) => Task.Run(async () =>
     {
         if (IsI2c(chip))
         {
             using var device = OpenDevice();
-            await WriteI2cEepromAsync(chip, startAddress, data, progress);
+            await WriteI2cEepromAsync(chip, startAddress, data, progress, skipBlankPages);
             return;
         }
 
@@ -1091,6 +1092,13 @@ public sealed class Ch347NativeProgrammer : IChipProgrammer
         {
             var pageOffset = (startAddress + done) % chip.PageSize;
             var count = Math.Min(chip.PageSize - pageOffset, data.Length - done);
+            if (skipBlankPages && IsBlank(data, done, count))
+            {
+                done += count;
+                progress.Report(data.Length == 0 ? 100 : done * 100 / data.Length);
+                continue;
+            }
+
             WriteEnable();
 
             var command = new byte[count + 4];
@@ -1118,7 +1126,7 @@ public sealed class Ch347NativeProgrammer : IChipProgrammer
         {
             using var device = OpenDevice();
             var blank = Enumerable.Repeat((byte)0xFF, chip.SizeBytes).ToArray();
-            await WriteI2cEepromAsync(chip, 0, blank, progress);
+            await WriteI2cEepromAsync(chip, 0, blank, progress, skipBlankPages: false);
             return;
         }
 
@@ -1193,7 +1201,7 @@ public sealed class Ch347NativeProgrammer : IChipProgrammer
         return result;
     }
 
-    private static async Task WriteI2cEepromAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress)
+    private static async Task WriteI2cEepromAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress, bool skipBlankPages)
     {
         var done = 0;
         while (done < data.Length)
@@ -1201,6 +1209,13 @@ public sealed class Ch347NativeProgrammer : IChipProgrammer
             var address = startAddress + done;
             var pageOffset = address % chip.PageSize;
             var count = Math.Min(chip.PageSize - pageOffset, data.Length - done);
+            if (skipBlankPages && IsBlank(data, done, count))
+            {
+                done += count;
+                progress.Report(data.Length == 0 ? 100 : done * 100 / data.Length);
+                continue;
+            }
+
             var write = BuildI2cPageWriteBuffer(chip, address, data, done, count);
 
             if (!NativeMethods.CH347StreamI2C(DeviceIndex, (uint)write.Length, write, 0, Array.Empty<byte>()))
@@ -1243,6 +1258,19 @@ public sealed class Ch347NativeProgrammer : IChipProgrammer
     }
 
     private static bool UsesOneByteI2cAddress(ChipProfile chip) => chip.SizeBytes <= 2048;
+
+    private static bool IsBlank(byte[] data, int offset, int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            if (data[offset + i] != 0xFF)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static void WriteEnable() => SpiTransfer([0x06]);
 
@@ -1404,12 +1432,12 @@ public sealed class ChNativeProgrammer : IChipProgrammer
         return result;
     });
 
-    public Task WriteAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress) => Task.Run(async () =>
+    public Task WriteAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress, bool skipBlankPages = false) => Task.Run(async () =>
     {
         if (IsI2c(chip))
         {
             using var i2cDevice = OpenDevice();
-            await WriteI2cEepromAsync(chip, startAddress, data, progress);
+            await WriteI2cEepromAsync(chip, startAddress, data, progress, skipBlankPages);
             return;
         }
 
@@ -1421,6 +1449,13 @@ public sealed class ChNativeProgrammer : IChipProgrammer
         {
             var pageOffset = (startAddress + done) % chip.PageSize;
             var count = Math.Min(chip.PageSize - pageOffset, data.Length - done);
+            if (skipBlankPages && IsBlank(data, done, count))
+            {
+                done += count;
+                progress.Report(data.Length == 0 ? 100 : done * 100 / data.Length);
+                continue;
+            }
+
             WriteEnable();
 
             var command = new byte[count + 4];
@@ -1448,7 +1483,7 @@ public sealed class ChNativeProgrammer : IChipProgrammer
         {
             using var i2cDevice = OpenDevice();
             var blank = Enumerable.Repeat((byte)0xFF, chip.SizeBytes).ToArray();
-            await WriteI2cEepromAsync(chip, 0, blank, progress);
+            await WriteI2cEepromAsync(chip, 0, blank, progress, skipBlankPages: false);
             return;
         }
 
@@ -1529,7 +1564,7 @@ public sealed class ChNativeProgrammer : IChipProgrammer
         return result;
     }
 
-    private static async Task WriteI2cEepromAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress)
+    private static async Task WriteI2cEepromAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress, bool skipBlankPages)
     {
         var done = 0;
         while (done < data.Length)
@@ -1537,6 +1572,13 @@ public sealed class ChNativeProgrammer : IChipProgrammer
             var address = startAddress + done;
             var pageOffset = address % chip.PageSize;
             var count = Math.Min(chip.PageSize - pageOffset, data.Length - done);
+            if (skipBlankPages && IsBlank(data, done, count))
+            {
+                done += count;
+                progress.Report(data.Length == 0 ? 100 : done * 100 / data.Length);
+                continue;
+            }
+
             var write = BuildI2cPageWriteBuffer(chip, address, data, done, count);
 
             if (!NativeMethods.CHStreamI2C(DeviceIndex, (uint)write.Length, write, 0, Array.Empty<byte>()))
@@ -1579,6 +1621,19 @@ public sealed class ChNativeProgrammer : IChipProgrammer
     }
 
     private static bool UsesOneByteI2cAddress(ChipProfile chip) => chip.SizeBytes <= 2048;
+
+    private static bool IsBlank(byte[] data, int offset, int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            if (data[offset + i] != 0xFF)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static void WriteEnable() => SpiTransfer([0x06]);
 
@@ -1687,7 +1742,7 @@ public sealed class MockCh34xProgrammer : IChipProgrammer
         return data;
     }
 
-    public Task WriteAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress) =>
+    public Task WriteAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress, bool skipBlankPages = false) =>
         SimulateBlocksAsync(data.Length, progress);
 
     public async Task<bool> VerifyAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress)

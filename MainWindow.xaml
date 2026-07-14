@@ -207,6 +207,10 @@
                                 <TextBlock Text="0x" VerticalAlignment="Center" Margin="0,0,4,7"/>
                                 <TextBox x:Name="StartAddressBox" Width="92" Text="000000"/>
                             </StackPanel>
+                            <CheckBox x:Name="SkipBlankPagesCheckBox"
+                                      Content="Skip FF pages"
+                                      Margin="0,4,0,0"
+                                      ToolTip="Skip pages that are already blank after erase"/>
                             <TextBlock x:Name="HardwareStatusText" Text="Programmer: not detected"/>
                             <TextBlock x:Name="BufferStatusText" Text="Buffer: 0 bytes" Margin="0,5,0,0"/>
                         </StackPanel>
