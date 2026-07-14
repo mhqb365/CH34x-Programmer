@@ -51,16 +51,20 @@ public partial class MainWindow : Window
     private readonly List<IcCandidate> _icCatalog = [];
     private IChipProgrammer _programmer = new MockCh34xProgrammer();
     private byte[] _buffer = [];
+    private int _previewStartOffset;
+    private int _currentOffset;
     private bool _isBusy;
     private bool _isApplyingDetectedChip;
+    private bool _isSearching;
+    private bool _updatingHexScrollBar;
 
     public MainWindow()
     {
         InitializeComponent();
         _icCatalog = BuildIcCatalog();
-        HexGrid.ItemsSource = _rows;
+        HexEditor.SetBuffer(_buffer, OnHexCellChanged);
+        UpdateHexScrollBar();
         Title = $"{AppName} v{AppVersion}";
-        VersionStatusText.Text = $"v{AppVersion}";
         AppendLog($"{AppName} v{AppVersion}");
 
         _isApplyingDetectedChip = true;
@@ -154,14 +158,27 @@ public partial class MainWindow : Window
         UpdateStatus();
     }
 
-    private void RebuildRows()
+    private void RebuildRows(int startOffset = 0)
     {
         _rows.Clear();
-        var displayBytes = Math.Min(_buffer.Length, MaxHexPreviewRows * BytesPerHexRow);
-        for (var offset = 0; offset < displayBytes; offset += BytesPerHexRow)
+        if (_buffer.Length == 0)
+        {
+            _previewStartOffset = 0;
+            HexEditor.SetBuffer(_buffer, OnHexCellChanged);
+            UpdateHexScrollBar();
+            return;
+        }
+
+        _previewStartOffset = AlignOffset(Math.Clamp(startOffset, 0, _buffer.Length - 1));
+        var maxPreviewBytes = MaxHexPreviewRows * BytesPerHexRow;
+        var endOffset = Math.Min(_buffer.Length, _previewStartOffset + maxPreviewBytes);
+        for (var offset = _previewStartOffset; offset < endOffset; offset += BytesPerHexRow)
         {
             _rows.Add(new HexRow(_buffer, offset, OnHexCellChanged));
         }
+
+        HexEditor.SetBuffer(_buffer, OnHexCellChanged);
+        UpdateHexScrollBar();
     }
 
     private void OnHexCellChanged(int offset, byte value)
@@ -169,7 +186,11 @@ public partial class MainWindow : Window
         if ((uint)offset < _buffer.Length)
         {
             _buffer[offset] = value;
-            _rows[offset / 16].RefreshAscii();
+            var rowIndex = (offset - _previewStartOffset) / BytesPerHexRow;
+            if ((uint)rowIndex < _rows.Count)
+            {
+                _rows[rowIndex].RefreshAscii();
+            }
         }
     }
 
@@ -337,6 +358,345 @@ public partial class MainWindow : Window
         AppendLog("Stop requested. Current operation will finish its current block.");
     }
 
+    private async void HexSearchPrevious_Click(object sender, RoutedEventArgs e) => await RunSearchAsync(forward: false);
+
+    private async void HexSearchNext_Click(object sender, RoutedEventArgs e) => await RunSearchAsync(forward: true);
+
+    private void HexSearchClear_Click(object sender, RoutedEventArgs e)
+    {
+        HexSearchBox.Clear();
+        HexSearchBox.Focus();
+    }
+
+    private void HexSearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        HexSearchClearButton.Visibility = string.IsNullOrEmpty(HexSearchBox.Text)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+    }
+
+    private async void HexSearchBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != System.Windows.Input.Key.Enter)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        await RunSearchAsync(forward: true);
+    }
+
+    private void HexEditor_ScrollChanged(object sender, EventArgs e) => UpdateHexScrollBar();
+
+    private void HexScrollBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_updatingHexScrollBar)
+        {
+            return;
+        }
+
+        HexEditor.SetFirstLine((int)e.NewValue);
+    }
+
+    private void UpdateHexScrollBar()
+    {
+        _updatingHexScrollBar = true;
+        try
+        {
+            HexScrollBar.Maximum = Math.Max(0, HexEditor.TotalLines - HexEditor.VisibleLines);
+            HexScrollBar.ViewportSize = HexEditor.VisibleLines;
+            HexScrollBar.LargeChange = Math.Max(1, HexEditor.VisibleLines - 1);
+            HexScrollBar.SmallChange = 1;
+            HexScrollBar.Value = Math.Min(HexScrollBar.Maximum, HexEditor.FirstLine);
+        }
+        finally
+        {
+            _updatingHexScrollBar = false;
+        }
+    }
+
+    private async Task RunSearchAsync(bool forward)
+    {
+        if (_isSearching)
+        {
+            AppendLog("Search is already running.");
+            return;
+        }
+
+        var query = HexSearchBox.Text?.Trim() ?? string.Empty;
+        var mode = CurrentHexSearchMode();
+        _isSearching = true;
+        HexSearchBox.IsEnabled = false;
+        HexSearchModeCombo.IsEnabled = false;
+        HexSearchPreviousButton.IsEnabled = false;
+        HexSearchNextButton.IsEnabled = false;
+        try
+        {
+            await SearchHexViewAsync(mode, query, forward);
+        }
+        finally
+        {
+            HexSearchBox.IsEnabled = true;
+            HexSearchModeCombo.IsEnabled = true;
+            HexSearchPreviousButton.IsEnabled = true;
+            HexSearchNextButton.IsEnabled = true;
+            _isSearching = false;
+        }
+    }
+
+    private string CurrentHexSearchMode() => HexSearchModeCombo.SelectedItem as string ?? "Offset";
+
+    private async Task SearchHexViewAsync(string mode, string query, bool forward)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(query))
+            {
+                return;
+            }
+
+            var result = await TryResolveSearchOffsetAsync(mode, query, forward);
+            if (!result.Found)
+            {
+                AppendLog(result.Message);
+                return;
+            }
+
+            var offset = result.Offset;
+            if ((uint)offset >= _buffer.Length)
+            {
+                AppendLog($"Offset 0x{offset:X6} is outside buffer range 0x000000-0x{Math.Max(0, _buffer.Length - 1):X6}.");
+                return;
+            }
+
+            if (string.Equals(mode, "Offset", StringComparison.OrdinalIgnoreCase))
+            {
+                ViewOffset(offset);
+                return;
+            }
+
+            ShowSearchResult(offset);
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"Search failed: {ex.Message}");
+        }
+    }
+
+    private async Task<SearchResult> TryResolveSearchOffsetAsync(string mode, string query, bool forward)
+    {
+        switch (mode)
+        {
+            case "Offset":
+                if (TryParseOffset(query, out var parsedOffset))
+                {
+                    return SearchResult.Success(parsedOffset);
+                }
+
+                return SearchResult.Fail($"Invalid offset: {query}");
+
+            case "Text":
+                return await SearchTextAsync(query, forward, $"Text not found: {query}");
+
+            default:
+                if (!TryParseHexPattern(query, out var pattern))
+                {
+                    return SearchResult.Fail($"Invalid hex pattern: {query}");
+                }
+
+                return await SearchPatternAsync(pattern, forward, $"Hex pattern not found: {query}");
+        }
+    }
+
+    private async Task<SearchResult> SearchPatternAsync(byte[] pattern, bool forward, string notFoundMessage)
+    {
+        if (pattern.Length == 0)
+        {
+            return SearchResult.Fail(notFoundMessage);
+        }
+
+        var buffer = _buffer;
+        var startOffset = Math.Clamp(_currentOffset + (forward ? 1 : -1), 0, Math.Max(0, buffer.Length - 1));
+        AppendLog($"Searching {FormatBytes(buffer.Length)}...");
+        var offset = await Task.Run(() => FindBytes(buffer, pattern, startOffset, forward));
+        if (offset < 0 && startOffset != 0)
+        {
+            offset = await Task.Run(() => FindBytes(buffer, pattern, forward ? 0 : buffer.Length - 1, forward));
+        }
+
+        return offset >= 0 ? SearchResult.Success(offset) : SearchResult.Fail(notFoundMessage);
+    }
+
+    private async Task<SearchResult> SearchTextAsync(string text, bool forward, string notFoundMessage)
+    {
+        var pattern = Encoding.ASCII.GetBytes(text);
+        if (pattern.Length == 0)
+        {
+            return SearchResult.Fail(notFoundMessage);
+        }
+
+        var buffer = _buffer;
+        var startOffset = Math.Clamp(_currentOffset + (forward ? 1 : -1), 0, Math.Max(0, buffer.Length - 1));
+        AppendLog($"Searching {FormatBytes(buffer.Length)}...");
+        var offset = await Task.Run(() => FindAsciiText(buffer, pattern, startOffset, forward));
+        if (offset < 0 && startOffset != 0)
+        {
+            offset = await Task.Run(() => FindAsciiText(buffer, pattern, forward ? 0 : buffer.Length - 1, forward));
+        }
+
+        return offset >= 0 ? SearchResult.Success(offset) : SearchResult.Fail(notFoundMessage);
+    }
+
+    private void ShowSearchResult(int offset)
+    {
+        _currentOffset = offset;
+        HexEditor.ScrollToOffset(offset);
+        AppendLog($"Found at 0x{offset:X6}.");
+    }
+
+    private void ViewOffset(int offset)
+    {
+        _currentOffset = offset;
+        RebuildRows(offset);
+        UpdateStatus();
+        HexEditor.ScrollToOffset(offset);
+        AppendLog($"Viewing 0x{_previewStartOffset:X6}.");
+    }
+
+    private static int AlignOffset(int offset) => offset / BytesPerHexRow * BytesPerHexRow;
+
+    private static int FindBytes(byte[] buffer, byte[] pattern, int startOffset, bool forward)
+    {
+        if (pattern.Length == 0 || pattern.Length > buffer.Length)
+        {
+            return -1;
+        }
+
+        startOffset = Math.Clamp(startOffset, 0, buffer.Length - 1);
+        if (forward)
+        {
+            var index = buffer.AsSpan(startOffset).IndexOf(pattern);
+            return index < 0 ? -1 : startOffset + index;
+        }
+
+        for (var offset = Math.Min(startOffset, buffer.Length - pattern.Length); offset >= 0; offset--)
+        {
+            if (buffer.AsSpan(offset, pattern.Length).SequenceEqual(pattern))
+            {
+                return offset;
+            }
+        }
+
+        return -1;
+    }
+
+    private static int FindAsciiText(byte[] buffer, byte[] pattern, int startOffset, bool forward)
+    {
+        if (pattern.Length == 0 || pattern.Length > buffer.Length)
+        {
+            return -1;
+        }
+
+        startOffset = Math.Clamp(startOffset, 0, buffer.Length - 1);
+        if (forward)
+        {
+            for (var offset = startOffset; offset <= buffer.Length - pattern.Length; offset++)
+            {
+                if (AsciiEqualsIgnoreCase(buffer, pattern, offset))
+                {
+                    return offset;
+                }
+            }
+
+            return -1;
+        }
+
+        for (var offset = Math.Min(startOffset, buffer.Length - pattern.Length); offset >= 0; offset--)
+        {
+            if (AsciiEqualsIgnoreCase(buffer, pattern, offset))
+            {
+                return offset;
+            }
+        }
+
+        return -1;
+    }
+
+    private static bool AsciiEqualsIgnoreCase(byte[] buffer, byte[] pattern, int offset)
+    {
+        for (var i = 0; i < pattern.Length; i++)
+        {
+            if (ToAsciiUpper(buffer[offset + i]) != ToAsciiUpper(pattern[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static byte ToAsciiUpper(byte value) => value is >= (byte)'a' and <= (byte)'z'
+        ? (byte)(value - 32)
+        : value;
+
+    private static bool TryParseHexPattern(string text, out byte[] pattern)
+    {
+        var builder = new StringBuilder(text.Length);
+        for (var i = 0; i < text.Length; i++)
+        {
+            var ch = text[i];
+            if (Uri.IsHexDigit(ch))
+            {
+                if (ch == '0' && i + 1 < text.Length && text[i + 1] is 'x' or 'X')
+                {
+                    i++;
+                    continue;
+                }
+
+                builder.Append(ch);
+                continue;
+            }
+
+            if (char.IsWhiteSpace(ch) || ch is '-' or '_' or ',' or ';')
+            {
+                continue;
+            }
+
+            pattern = [];
+            return false;
+        }
+
+        var hex = builder.ToString();
+        if (hex.Length == 0 || hex.Length % 2 != 0)
+        {
+            pattern = [];
+            return false;
+        }
+
+        pattern = new byte[hex.Length / 2];
+        for (var i = 0; i < pattern.Length; i++)
+        {
+            if (!byte.TryParse(hex.Substring(i * 2, 2), System.Globalization.NumberStyles.HexNumber, null, out pattern[i]))
+            {
+                pattern = [];
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TryParseOffset(string text, out int offset)
+    {
+        text = text.Trim();
+        if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            text = text[2..];
+        }
+
+        return int.TryParse(text, System.Globalization.NumberStyles.HexNumber, null, out offset);
+    }
+
     private void ThemeToggleButton_Toggled(object sender, RoutedEventArgs e)
     {
         ApplyTheme(ThemeToggleButton.IsChecked == true);
@@ -355,6 +715,7 @@ public partial class MainWindow : Window
             SetBrush("SurfaceBackgroundBrush", "#202328");
             SetBrush("SubtleBackgroundBrush", "#292D33");
             SetBrush("InputBackgroundBrush", "#30353B");
+            SetBrush("HoverBackgroundBrush", "#3A4652");
             SetBrush("AlternateRowBackgroundBrush", "#262A30");
             SetBrush("TextBrush", "#D8DEE8");
             SetBrush("MutedTextBrush", "#AEB7C4");
@@ -378,6 +739,7 @@ public partial class MainWindow : Window
         SetBrush("SurfaceBackgroundBrush", "#FFFFFF");
         SetBrush("SubtleBackgroundBrush", "#F6F6F6");
         SetBrush("InputBackgroundBrush", "#F7F7F7");
+        SetBrush("HoverBackgroundBrush", "#E9F3FF");
         SetBrush("AlternateRowBackgroundBrush", "#FBFBFB");
         SetBrush("TextBrush", "#000000");
         SetBrush("MutedTextBrush", "#333333");
@@ -814,10 +1176,15 @@ public partial class MainWindow : Window
     private void UpdateStatus()
     {
         SizeStatusText.Text = $"Size: {_buffer.Length}";
-        var previewBytes = Math.Min(_buffer.Length, MaxHexPreviewRows * BytesPerHexRow);
-        BufferStatusText.Text = previewBytes < _buffer.Length
-            ? $"Buffer: {FormatBytes(_buffer.Length)} (showing first {FormatBytes(previewBytes)})"
-            : $"Buffer: {FormatBytes(_buffer.Length)}";
+        var previewBytes = _rows.Count * BytesPerHexRow;
+        if (previewBytes < _buffer.Length)
+        {
+            var previewEnd = Math.Min(_buffer.Length - 1, _previewStartOffset + previewBytes - 1);
+            BufferStatusText.Text = $"Buffer: {FormatBytes(_buffer.Length)} (0x{_previewStartOffset:X6}-0x{previewEnd:X6})";
+            return;
+        }
+
+        BufferStatusText.Text = $"Buffer: {FormatBytes(_buffer.Length)}";
     }
 
     private void AppendLog(string message)
@@ -879,6 +1246,13 @@ public sealed record IcCandidate(
 
 public sealed record SizeOption(string Label, int Bytes);
 
+public sealed record SearchResult(bool Found, int Offset, string Message)
+{
+    public static SearchResult Success(int offset) => new(true, offset, string.Empty);
+
+    public static SearchResult Fail(string message) => new(false, -1, message);
+}
+
 public sealed class HexRow : INotifyPropertyChanged
 {
     private readonly byte[] _buffer;
@@ -922,6 +1296,22 @@ public sealed class HexRow : INotifyPropertyChanged
             }
 
             return builder.ToString();
+        }
+        set
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return;
+            }
+
+            for (var i = 0; i < 16 && i < value.Length && _offset + i < _buffer.Length; i++)
+            {
+                var next = value[i] is >= ' ' and <= '~' ? (byte)value[i] : (byte)'.';
+                _onChanged(_offset + i, next);
+                OnPropertyChanged(CellName(i));
+            }
+
+            RefreshAscii();
         }
     }
 

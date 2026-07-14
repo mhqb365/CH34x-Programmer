@@ -10,6 +10,7 @@
         <SolidColorBrush x:Key="SurfaceBackgroundBrush" Color="#FFFFFF"/>
         <SolidColorBrush x:Key="SubtleBackgroundBrush" Color="#F6F6F6"/>
         <SolidColorBrush x:Key="InputBackgroundBrush" Color="#F7F7F7"/>
+        <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#E9F3FF"/>
         <SolidColorBrush x:Key="AlternateRowBackgroundBrush" Color="#FBFBFB"/>
         <SolidColorBrush x:Key="TextBrush" Color="#000000"/>
         <SolidColorBrush x:Key="MutedTextBrush" Color="#333333"/>
