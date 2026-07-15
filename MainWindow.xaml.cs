@@ -201,6 +201,11 @@ public partial class MainWindow : Window
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         Loaded -= MainWindow_Loaded;
+        if (!await CheckForUpdatesOnStartupAsync())
+        {
+            return;
+        }
+
         await Task.Delay(TimeSpan.FromSeconds(1));
         await ProbeProgrammerAsync(logWhenChanged: true);
         if (HasProgrammer)
@@ -210,6 +215,65 @@ public partial class MainWindow : Window
         }
 
         _programmerMonitorTimer.Start();
+    }
+
+    private async Task<bool> CheckForUpdatesOnStartupAsync()
+    {
+        OperationStatusText.Text = "Checking update";
+        OperationProgress.IsIndeterminate = true;
+        try
+        {
+            var result = await UpdateService.CheckLatestReleaseAsync();
+            if (result.Status != UpdateCheckStatus.UpdateAvailable || result.Release is null)
+            {
+                return true;
+            }
+
+            var updateNow = MessageBox.Show(
+                this,
+                $"A new version is available: {result.DisplayLatestVersion}\nCurrent version: {UpdateService.DisplayCurrentVersion}\n\nUpdate now?",
+                "Update available",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information) == MessageBoxResult.Yes;
+            if (!updateNow)
+            {
+                AppendLog($"Update skipped: {result.DisplayLatestVersion}");
+                return true;
+            }
+
+            using var cts = new CancellationTokenSource();
+            OperationProgress.IsIndeterminate = false;
+            OperationProgress.Value = 0;
+            var progress = new Progress<UpdateProgressInfo>(info =>
+            {
+                OperationProgress.IsIndeterminate = info.State != UpdateProgressState.Downloading;
+                OperationProgress.Value = Math.Clamp(info.Percentage, 0, 100);
+                OperationStatusText.Text = info.State switch
+                {
+                    UpdateProgressState.Downloading => "Downloading update",
+                    UpdateProgressState.Extracting => "Extracting update",
+                    UpdateProgressState.Preparing => "Preparing update",
+                    _ => "Updating"
+                };
+            });
+
+            AppendLog($"Downloading update {result.DisplayLatestVersion}");
+            var update = await UpdateService.DownloadAndPrepareUpdateAsync(result.Release, progress, cts.Token);
+            AppendLog("Installing update");
+            UpdateService.InstallPreparedUpdate(update);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"Update check skipped: {ex.Message}");
+            return true;
+        }
+        finally
+        {
+            OperationProgress.IsIndeterminate = false;
+            OperationProgress.Value = 0;
+            OperationStatusText.Text = "Ready";
+        }
     }
 
     private async void ProgrammerMonitorTimer_Tick(object? sender, EventArgs e)
