@@ -441,10 +441,12 @@ public partial class MainWindow : Window
 
         await RunOperationAsync("Write chip", _buffer.Length, async progress =>
         {
+            var chip = CurrentChip();
             var startAddress = ParseStartAddress();
             var skipBlankPages = SkipBlankPagesCheckBox.IsChecked == true;
             AppendLog($"Write request: {FormatBytes(_buffer.Length)} to 0x{startAddress:X6}{(skipBlankPages ? " (skip FF pages)" : "")}");
-            await _programmer.WriteAsync(CurrentChip(), startAddress, _buffer, progress, skipBlankPages);
+            await UnprotectIfRequestedAsync(chip, progress);
+            await _programmer.WriteAsync(chip, startAddress, _buffer, progress, skipBlankPages);
         });
     }
 
@@ -478,7 +480,9 @@ public partial class MainWindow : Window
 
         await RunOperationAsync("Erase chip", CurrentChip().SizeBytes, async progress =>
         {
-            await _programmer.EraseAsync(CurrentChip(), progress);
+            var chip = CurrentChip();
+            await UnprotectIfRequestedAsync(chip, progress);
+            await _programmer.EraseAsync(chip, progress);
         });
     }
 
@@ -961,11 +965,24 @@ public partial class MainWindow : Window
             }
 
             AppendLog($"Script request: erase, write and verify {FormatBytes(_buffer.Length)} at 0x{startAddress:X6}");
+            await UnprotectIfRequestedAsync(chip, progress);
             await _programmer.EraseAsync(chip, progress);
             await _programmer.WriteAsync(chip, startAddress, _buffer, progress, skipBlankPages: true);
             var ok = await _programmer.VerifyAsync(chip, startAddress, _buffer, progress);
             AppendLog(ok ? "Script completed: verify OK" : "Script completed: verify failed");
         });
+    }
+
+    private async Task UnprotectIfRequestedAsync(ChipProfile chip, IProgress<int> progress)
+    {
+        if (UnprotectChipCheckBox.IsChecked != true)
+        {
+            return;
+        }
+
+        AppendLog($"Unprotect request: {chip.Name}");
+        await _programmer.UnprotectAsync(chip, progress);
+        AppendLog("Unprotect completed");
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e) => Close();
@@ -1526,6 +1543,7 @@ public interface IChipProgrammer
     Task<byte[]> ReadAsync(ChipProfile chip, int startAddress, int length, IProgress<int> progress);
     Task WriteAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress, bool skipBlankPages = false);
     Task<bool> VerifyAsync(ChipProfile chip, int startAddress, byte[] data, IProgress<int> progress);
+    Task UnprotectAsync(ChipProfile chip, IProgress<int> progress);
     Task EraseAsync(ChipProfile chip, IProgress<int> progress);
 }
 
@@ -1659,6 +1677,18 @@ public sealed class Ch347NativeProgrammer : IChipProgrammer
         var actual = await ReadAsync(chip, startAddress, data.Length, progress);
         return actual.SequenceEqual(data);
     }
+
+    public Task UnprotectAsync(ChipProfile chip, IProgress<int> progress) => Task.Run(async () =>
+    {
+        if (IsI2c(chip))
+        {
+            throw new NotSupportedException("I2C EEPROM does not use SPI NOR block-protect status bits.");
+        }
+
+        EnsureSpi(chip);
+        using var spiDevice = OpenDevice();
+        await ClearSpiNorProtectionAsync(progress);
+    });
 
     public Task EraseAsync(ChipProfile chip, IProgress<int> progress) => Task.Run(async () =>
     {
@@ -1818,6 +1848,28 @@ public sealed class Ch347NativeProgrammer : IChipProgrammer
     {
         var status = SpiTransfer([0x05, 0x00]);
         return (status[1] & 0x01) != 0;
+    }
+
+    private static byte ReadStatus(byte command) => SpiTransfer([command, 0x00])[1];
+
+    private static async Task ClearSpiNorProtectionAsync(IProgress<int> progress)
+    {
+        var sr1 = ReadStatus(0x05);
+        var sr2 = ReadStatus(0x35);
+        progress.Report(20);
+
+        var nextSr1 = (byte)(sr1 & 0x03);
+        var nextSr2 = (byte)(sr2 & 0x02);
+        if (nextSr1 == sr1 && nextSr2 == sr2)
+        {
+            progress.Report(100);
+            return;
+        }
+
+        WriteEnable();
+        SpiTransfer([0x01, nextSr1, nextSr2]);
+        await WaitUntilReadyAsync();
+        progress.Report(100);
     }
 
     private static async Task WaitUntilReadyAsync()
@@ -2017,6 +2069,18 @@ public sealed class ChNativeProgrammer : IChipProgrammer
         return actual.SequenceEqual(data);
     }
 
+    public Task UnprotectAsync(ChipProfile chip, IProgress<int> progress) => Task.Run(async () =>
+    {
+        if (IsI2c(chip))
+        {
+            throw new NotSupportedException("I2C EEPROM does not use SPI NOR block-protect status bits.");
+        }
+
+        EnsureSpi(chip);
+        using var spiDevice = OpenDevice();
+        await ClearSpiNorProtectionAsync(progress);
+    });
+
     public Task EraseAsync(ChipProfile chip, IProgress<int> progress) => Task.Run(async () =>
     {
         if (IsI2c(chip))
@@ -2183,6 +2247,28 @@ public sealed class ChNativeProgrammer : IChipProgrammer
         return (status[1] & 0x01) != 0;
     }
 
+    private static byte ReadStatus(byte command) => SpiTransfer([command, 0x00])[1];
+
+    private static async Task ClearSpiNorProtectionAsync(IProgress<int> progress)
+    {
+        var sr1 = ReadStatus(0x05);
+        var sr2 = ReadStatus(0x35);
+        progress.Report(20);
+
+        var nextSr1 = (byte)(sr1 & 0x03);
+        var nextSr2 = (byte)(sr2 & 0x02);
+        if (nextSr1 == sr1 && nextSr2 == sr2)
+        {
+            progress.Report(100);
+            return;
+        }
+
+        WriteEnable();
+        SpiTransfer([0x01, nextSr1, nextSr2]);
+        await WaitUntilReadyAsync();
+        progress.Report(100);
+    }
+
     private static async Task WaitUntilReadyAsync()
     {
         for (var i = 0; i < 500; i++)
@@ -2290,6 +2376,8 @@ public sealed class MockCh34xProgrammer : IChipProgrammer
         await SimulateBlocksAsync(data.Length, progress);
         return true;
     }
+
+    public Task UnprotectAsync(ChipProfile chip, IProgress<int> progress) => SimulateAsync(progress, 200);
 
     public Task EraseAsync(ChipProfile chip, IProgress<int> progress) => SimulateAsync(progress, 700);
 

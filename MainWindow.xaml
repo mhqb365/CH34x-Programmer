@@ -371,6 +371,10 @@
                                       Content="Skip FF pages"
                                       Margin="0,4,0,4"
                                       ToolTip="Skip pages that are already blank after erase"/>
+                            <CheckBox x:Name="UnprotectChipCheckBox"
+                                      Content="Unprotect chip"
+                                      Margin="0,0,0,4"
+                                      ToolTip="Clear SPI NOR block-protect bits before write/erase"/>
                             <TextBlock x:Name="BufferStatusText" Text="Buffer: 0 bytes" Margin="0,5,0,0"/>
                         </StackPanel>
                     </GroupBox>
