@@ -34,8 +34,9 @@ public sealed class HexEditorView : FrameworkElement
     private bool _asciiEdit;
     private int _pendingNibble = -1;
     private bool _isSelecting;
-    private readonly Stack<ByteEdit> _undo = [];
-    private readonly Stack<ByteEdit> _redo = [];
+    private readonly Stack<EditBatch> _undo = [];
+    private readonly Stack<EditBatch> _redo = [];
+    private readonly HashSet<int> _editedOffsets = [];
 
     public HexEditorView()
     {
@@ -53,6 +54,7 @@ public sealed class HexEditorView : FrameworkElement
         _selectionEnd = 0;
         _undo.Clear();
         _redo.Clear();
+        _editedOffsets.Clear();
         InvalidateVisual();
     }
 
@@ -86,6 +88,26 @@ public sealed class HexEditorView : FrameworkElement
         InvalidateVisual();
     }
 
+    public void SelectRange(int offset, int length)
+    {
+        if (_buffer.Length == 0)
+        {
+            return;
+        }
+
+        _selectedOffset = Math.Clamp(offset, 0, _buffer.Length - 1);
+        _selectionAnchor = _selectedOffset;
+        _selectionEnd = Math.Clamp(_selectedOffset + Math.Max(1, length) - 1, 0, _buffer.Length - 1);
+        var line = _selectedOffset / BytesPerLine;
+        var visibleLines = VisibleLines;
+        if (line < _firstLine || line >= _firstLine + visibleLines)
+        {
+            SetFirstLine(Math.Max(0, line - visibleLines / 2));
+        }
+
+        InvalidateVisual();
+    }
+
     public void SetFirstLine(int line)
     {
         var maxFirstLine = Math.Max(0, TotalLines - VisibleLines);
@@ -104,10 +126,15 @@ public sealed class HexEditorView : FrameworkElement
     {
         var background = Background ?? Brushes.White;
         var foreground = Foreground ?? Brushes.Black;
-        var muted = new SolidColorBrush(Color.FromRgb(90, 170, 210));
-        var selection = new SolidColorBrush(Color.FromRgb(64, 90, 120));
+        var darkBackground = IsDarkBrush(background);
+        var editorBackground = darkBackground ? background : new SolidColorBrush(Color.FromRgb(252, 253, 255));
+        var muted = new SolidColorBrush(darkBackground ? Color.FromRgb(90, 170, 210) : Color.FromRgb(0, 0, 205));
+        var selection = new SolidColorBrush(darkBackground ? Color.FromRgb(64, 90, 120) : Color.FromRgb(190, 232, 248));
+        var linkedSelection = new SolidColorBrush(darkBackground ? Color.FromArgb(120, 64, 90, 120) : Color.FromRgb(226, 246, 252));
+        var editedBrush = new SolidColorBrush(darkBackground ? Color.FromRgb(255, 128, 128) : Color.FromRgb(255, 64, 64));
+        var linkedEditedBrush = new SolidColorBrush(darkBackground ? Color.FromRgb(210, 110, 110) : Color.FromRgb(235, 95, 95));
         dc.PushClip(new RectangleGeometry(new Rect(0, 0, ActualWidth, ActualHeight)));
-        dc.DrawRectangle(background, null, new Rect(0, 0, ActualWidth, ActualHeight));
+        dc.DrawRectangle(editorBackground, null, new Rect(0, 0, ActualWidth, ActualHeight));
         var asciiX = GetAsciiX();
         var selectionStart = Math.Min(_selectionAnchor, _selectionEnd);
         var selectionEnd = Math.Max(_selectionAnchor, _selectionEnd);
@@ -128,25 +155,34 @@ public sealed class HexEditorView : FrameworkElement
             {
                 var byteOffset = offset + i;
                 var x = HexX + i * ByteCellWidth;
-                if (byteOffset >= selectionStart && byteOffset <= selectionEnd && !_asciiEdit)
+                if (byteOffset >= selectionStart && byteOffset <= selectionEnd)
                 {
-                    dc.DrawRectangle(selection, null, new Rect(x - 2, y, 20, LineHeight));
+                    dc.DrawRectangle(_asciiEdit ? linkedSelection : selection, null, new Rect(x - 2, y, 20, LineHeight));
                 }
 
-                DrawText(dc, _buffer[byteOffset].ToString("X2"), x, y, foreground);
+                var text = _buffer[byteOffset].ToString("X2");
+                var brush = _editedOffsets.Contains(byteOffset) ? editedBrush : foreground;
+                if (!_asciiEdit && _pendingNibble >= 0 && byteOffset == _selectedOffset)
+                {
+                    text = $"{_pendingNibble:X1}_";
+                    brush = editedBrush;
+                }
+
+                DrawText(dc, text, x, y, brush);
             }
 
             for (var i = 0; i < BytesPerLine && offset + i < _buffer.Length; i++)
             {
                 var byteOffset = offset + i;
                 var x = asciiX + i * CharCellWidth;
-                if (byteOffset >= selectionStart && byteOffset <= selectionEnd && _asciiEdit)
+                if (byteOffset >= selectionStart && byteOffset <= selectionEnd)
                 {
-                    dc.DrawRectangle(selection, null, new Rect(x - 1, y, CharCellWidth, LineHeight));
+                    dc.DrawRectangle(_asciiEdit ? selection : linkedSelection, null, new Rect(x - 1, y, CharCellWidth, LineHeight));
                 }
 
                 var b = _buffer[byteOffset];
-                DrawText(dc, b is >= 32 and <= 126 ? ((char)b).ToString() : ".", x, y, foreground);
+                var brush = _editedOffsets.Contains(byteOffset) ? linkedEditedBrush : foreground;
+                DrawText(dc, b is >= 32 and <= 126 ? ((char)b).ToString() : ".", x, y, brush);
             }
         }
         dc.Pop();
@@ -265,6 +301,7 @@ public sealed class HexEditorView : FrameworkElement
         if (_pendingNibble < 0)
         {
             _pendingNibble = nibble;
+            InvalidateVisual();
         }
         else
         {
@@ -312,9 +349,17 @@ public sealed class HexEditorView : FrameworkElement
             return;
         }
 
+        var edits = new List<ByteEdit>(count);
         for (var i = 0; i < count; i++)
         {
-            SetByte(_selectedOffset + i, bytes[i]);
+            AddByteEdit(_selectedOffset + i, bytes[i], edits);
+        }
+
+        if (edits.Count > 0)
+        {
+            _undo.Push(new EditBatch(edits.ToArray()));
+            _redo.Clear();
+            InvalidateVisual();
         }
 
         _pendingNibble = -1;
@@ -350,7 +395,8 @@ public sealed class HexEditorView : FrameworkElement
         }
 
         _buffer[offset] = value;
-        _undo.Push(new ByteEdit(offset, oldValue, value));
+        _editedOffsets.Add(offset);
+        _undo.Push(new EditBatch([new ByteEdit(offset, oldValue, value)]));
         _redo.Clear();
         _byteChanged?.Invoke(offset, value);
         InvalidateVisual();
@@ -358,28 +404,52 @@ public sealed class HexEditorView : FrameworkElement
 
     private void Undo()
     {
-        if (!_undo.TryPop(out var edit))
+        if (!_undo.TryPop(out var batch))
         {
             return;
         }
 
-        _buffer[edit.Offset] = edit.OldValue;
-        _redo.Push(edit);
-        _byteChanged?.Invoke(edit.Offset, edit.OldValue);
-        ScrollToOffset(edit.Offset);
+        foreach (var edit in batch.Edits.Reverse())
+        {
+            _buffer[edit.Offset] = edit.OldValue;
+            _editedOffsets.Remove(edit.Offset);
+            _byteChanged?.Invoke(edit.Offset, edit.OldValue);
+        }
+
+        _redo.Push(batch);
+        ScrollToOffset(batch.Edits[0].Offset);
     }
 
     private void Redo()
     {
-        if (!_redo.TryPop(out var edit))
+        if (!_redo.TryPop(out var batch))
         {
             return;
         }
 
-        _buffer[edit.Offset] = edit.NewValue;
-        _undo.Push(edit);
-        _byteChanged?.Invoke(edit.Offset, edit.NewValue);
-        ScrollToOffset(edit.Offset);
+        foreach (var edit in batch.Edits)
+        {
+            _buffer[edit.Offset] = edit.NewValue;
+            _editedOffsets.Add(edit.Offset);
+            _byteChanged?.Invoke(edit.Offset, edit.NewValue);
+        }
+
+        _undo.Push(batch);
+        ScrollToOffset(batch.Edits[^1].Offset);
+    }
+
+    private void AddByteEdit(int offset, byte value, ICollection<ByteEdit> edits)
+    {
+        var oldValue = _buffer[offset];
+        if (oldValue == value)
+        {
+            return;
+        }
+
+        _buffer[offset] = value;
+        _editedOffsets.Add(offset);
+        edits.Add(new ByteEdit(offset, oldValue, value));
+        _byteChanged?.Invoke(offset, value);
     }
 
     private bool TryHitTestOffset(Point p, out int offset, out bool ascii)
@@ -451,6 +521,18 @@ public sealed class HexEditorView : FrameworkElement
         return bytes;
     }
 
+    private static bool IsDarkBrush(Brush brush)
+    {
+        if (brush is not SolidColorBrush solid)
+        {
+            return false;
+        }
+
+        var color = solid.Color;
+        var luminance = (0.2126 * color.R + 0.7152 * color.G + 0.0722 * color.B) / 255;
+        return luminance < 0.45;
+    }
+
     private static char? KeyToChar(KeyEventArgs e)
     {
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
@@ -490,6 +572,8 @@ public sealed class HexEditorView : FrameworkElement
         get => (Brush?)GetValue(ForegroundProperty);
         set => SetValue(ForegroundProperty, value);
     }
+
+    private sealed record EditBatch(ByteEdit[] Edits);
 
     private readonly record struct ByteEdit(int Offset, byte OldValue, byte NewValue);
 }

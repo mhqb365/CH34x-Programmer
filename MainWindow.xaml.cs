@@ -19,8 +19,10 @@ public partial class MainWindow : Window
     private const string ProjectUrl = "https://github.com/mhqb365/CH34x-Programmer";
     private const int MaxHexPreviewRows = 4096;
     private const int BytesPerHexRow = 16;
+    private const int SearchHitContextBytes = 16;
 
     private readonly ObservableCollection<HexRow> _rows = [];
+    private readonly ObservableCollection<SearchHit> _searchHits = [];
     private readonly List<ChipProfile> _chips =
     [
         new("W25Q80", "SPI", 1024 * 1024, 256, "25xx", "WINBOND", "3.3V", "SPI_NOR"),
@@ -65,6 +67,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _icCatalog = BuildIcCatalog();
+        SearchHitsGrid.ItemsSource = _searchHits;
         HexEditor.SetBuffer(_buffer, OnHexCellChanged);
         UpdateHexScrollBar();
         Title = $"{AppName} v{AppVersion}";
@@ -512,6 +515,8 @@ public partial class MainWindow : Window
 
     private async void HexSearchNext_Click(object sender, RoutedEventArgs e) => await RunSearchAsync(forward: true);
 
+    private async void HexSearchAll_Click(object sender, RoutedEventArgs e) => await RunSearchAllAsync();
+
     private void HexSearchClear_Click(object sender, RoutedEventArgs e)
     {
         HexSearchBox.Clear();
@@ -523,6 +528,14 @@ public partial class MainWindow : Window
         HexSearchClearButton.Visibility = string.IsNullOrEmpty(HexSearchBox.Text)
             ? Visibility.Collapsed
             : Visibility.Visible;
+    }
+
+    private void SearchHitsGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (SearchHitsGrid.SelectedItem is SearchHit { Offset: >= 0, Length: > 0 } hit)
+        {
+            ShowSearchResult(hit.Offset, hit.Length);
+        }
     }
 
     private async void HexSearchBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -579,6 +592,7 @@ public partial class MainWindow : Window
         HexSearchBox.IsEnabled = false;
         HexSearchModeCombo.IsEnabled = false;
         HexSearchPreviousButton.IsEnabled = false;
+        HexSearchAllButton.IsEnabled = false;
         HexSearchNextButton.IsEnabled = false;
         try
         {
@@ -589,6 +603,38 @@ public partial class MainWindow : Window
             HexSearchBox.IsEnabled = true;
             HexSearchModeCombo.IsEnabled = true;
             HexSearchPreviousButton.IsEnabled = true;
+            HexSearchAllButton.IsEnabled = true;
+            HexSearchNextButton.IsEnabled = true;
+            _isSearching = false;
+        }
+    }
+
+    private async Task RunSearchAllAsync()
+    {
+        if (_isSearching)
+        {
+            AppendLog("Search is already running");
+            return;
+        }
+
+        var query = HexSearchBox.Text?.Trim() ?? string.Empty;
+        var mode = CurrentHexSearchMode();
+        _isSearching = true;
+        HexSearchBox.IsEnabled = false;
+        HexSearchModeCombo.IsEnabled = false;
+        HexSearchPreviousButton.IsEnabled = false;
+        HexSearchAllButton.IsEnabled = false;
+        HexSearchNextButton.IsEnabled = false;
+        try
+        {
+            await SearchAllHexViewAsync(mode, query);
+        }
+        finally
+        {
+            HexSearchBox.IsEnabled = true;
+            HexSearchModeCombo.IsEnabled = true;
+            HexSearchPreviousButton.IsEnabled = true;
+            HexSearchAllButton.IsEnabled = true;
             HexSearchNextButton.IsEnabled = true;
             _isSearching = false;
         }
@@ -609,6 +655,7 @@ public partial class MainWindow : Window
             if (!result.Found)
             {
                 AppendLog(result.Message);
+                ShowSearchHits([], query, result.Message);
                 return;
             }
 
@@ -625,11 +672,75 @@ public partial class MainWindow : Window
                 return;
             }
 
-            ShowSearchResult(offset);
+            ShowSearchHits([offset], query, $"{query}: 1 match");
+            ShowSearchResult(offset, result.Length);
         }
         catch (Exception ex)
         {
             AppendLog($"Search failed: {ex.Message}");
+        }
+    }
+
+    private async Task SearchAllHexViewAsync(string mode, string query)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(query))
+            {
+                return;
+            }
+
+            if (string.Equals(mode, "Offset", StringComparison.OrdinalIgnoreCase))
+            {
+                AppendLog("Search all supports Hex and Text modes only");
+                return;
+            }
+
+            byte[] pattern;
+            string label;
+            if (string.Equals(mode, "Text", StringComparison.OrdinalIgnoreCase))
+            {
+                pattern = Encoding.ASCII.GetBytes(query);
+                label = $"Text \"{query}\"";
+            }
+            else
+            {
+                if (!TryParseHexPattern(query, out pattern))
+                {
+                    AppendLog($"Invalid hex pattern: {query}");
+                    return;
+                }
+
+                label = $"Hex {FormatHexPattern(pattern)}";
+            }
+
+            if (pattern.Length == 0)
+            {
+                AppendLog($"Nothing to search: {query}");
+                return;
+            }
+
+            var buffer = _buffer;
+            AppendLog($"Searching all {FormatBytes(buffer.Length)}...");
+            var offsets = await Task.Run(() => string.Equals(mode, "Text", StringComparison.OrdinalIgnoreCase)
+                ? FindAllAsciiText(buffer, pattern)
+                : FindAllBytes(buffer, pattern));
+
+            if (offsets.Count == 0)
+            {
+                AppendLog($"{label} not found");
+                ShowSearchHits([], query, $"{label} not found");
+                return;
+            }
+
+            AppendLog($"{label}: {offsets.Count} match(es); see Search tab");
+
+            ShowSearchHits(offsets, query, $"{label}: {offsets.Count} match(es)");
+            ShowSearchResult(offsets[0], pattern.Length);
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"Search all failed: {ex.Message}");
         }
     }
 
@@ -640,7 +751,7 @@ public partial class MainWindow : Window
             case "Offset":
                 if (TryParseOffset(query, out var parsedOffset))
                 {
-                    return SearchResult.Success(parsedOffset);
+                    return SearchResult.Success(parsedOffset, 1);
                 }
 
                 return SearchResult.Fail($"Invalid offset: {query}");
@@ -674,7 +785,7 @@ public partial class MainWindow : Window
             offset = await Task.Run(() => FindBytes(buffer, pattern, forward ? 0 : buffer.Length - 1, forward));
         }
 
-        return offset >= 0 ? SearchResult.Success(offset) : SearchResult.Fail(notFoundMessage);
+        return offset >= 0 ? SearchResult.Success(offset, pattern.Length) : SearchResult.Fail(notFoundMessage);
     }
 
     private async Task<SearchResult> SearchTextAsync(string text, bool forward, string notFoundMessage)
@@ -694,14 +805,42 @@ public partial class MainWindow : Window
             offset = await Task.Run(() => FindAsciiText(buffer, pattern, forward ? 0 : buffer.Length - 1, forward));
         }
 
-        return offset >= 0 ? SearchResult.Success(offset) : SearchResult.Fail(notFoundMessage);
+        return offset >= 0 ? SearchResult.Success(offset, pattern.Length) : SearchResult.Fail(notFoundMessage);
     }
 
-    private void ShowSearchResult(int offset)
+    private void ShowSearchResult(int offset, int length = 1)
     {
         _currentOffset = offset;
-        HexEditor.ScrollToOffset(offset);
+        HexEditor.SelectRange(offset, length);
         AppendLog($"Found at 0x{offset:X6}");
+    }
+
+    private void ShowSearchHits(IReadOnlyList<int> offsets, string query, string status)
+    {
+        _searchHits.Clear();
+        if (offsets.Count == 0)
+        {
+            _searchHits.Add(SearchHit.Message(status));
+            return;
+        }
+
+        var length = Math.Max(1, CurrentHexSearchMode().Equals("Text", StringComparison.OrdinalIgnoreCase)
+            ? Encoding.ASCII.GetByteCount(query)
+            : TryParseHexPattern(query, out var pattern) ? pattern.Length : 1);
+        foreach (var offset in offsets)
+        {
+            _searchHits.Add(CreateSearchHit(offset, length));
+        }
+    }
+
+    private SearchHit CreateSearchHit(int offset, int length)
+    {
+        var contextStart = Math.Max(0, offset - SearchHitContextBytes);
+        var contextEnd = Math.Min(_buffer.Length, offset + length + SearchHitContextBytes);
+        var span = _buffer.AsSpan(contextStart, contextEnd - contextStart).ToArray();
+        var hex = string.Join(" ", span.Select(b => b.ToString("X2", System.Globalization.CultureInfo.InvariantCulture)));
+        var text = new string(span.Select(b => b is >= 32 and <= 126 ? (char)b : '.').ToArray());
+        return new SearchHit(offset, length, $"0x{offset:X6}", hex, text);
     }
 
     private void ViewOffset(int offset)
@@ -740,6 +879,31 @@ public partial class MainWindow : Window
         return -1;
     }
 
+    private static List<int> FindAllBytes(byte[] buffer, byte[] pattern)
+    {
+        var offsets = new List<int>();
+        if (pattern.Length == 0 || pattern.Length > buffer.Length)
+        {
+            return offsets;
+        }
+
+        var offset = 0;
+        while (offset <= buffer.Length - pattern.Length)
+        {
+            var index = buffer.AsSpan(offset).IndexOf(pattern);
+            if (index < 0)
+            {
+                break;
+            }
+
+            var absolute = offset + index;
+            offsets.Add(absolute);
+            offset = absolute + 1;
+        }
+
+        return offsets;
+    }
+
     private static int FindAsciiText(byte[] buffer, byte[] pattern, int startOffset, bool forward)
     {
         if (pattern.Length == 0 || pattern.Length > buffer.Length)
@@ -770,6 +934,25 @@ public partial class MainWindow : Window
         }
 
         return -1;
+    }
+
+    private static List<int> FindAllAsciiText(byte[] buffer, byte[] pattern)
+    {
+        var offsets = new List<int>();
+        if (pattern.Length == 0 || pattern.Length > buffer.Length)
+        {
+            return offsets;
+        }
+
+        for (var offset = 0; offset <= buffer.Length - pattern.Length; offset++)
+        {
+            if (AsciiEqualsIgnoreCase(buffer, pattern, offset))
+            {
+                offsets.Add(offset);
+            }
+        }
+
+        return offsets;
     }
 
     private static bool AsciiEqualsIgnoreCase(byte[] buffer, byte[] pattern, int offset)
@@ -836,6 +1019,9 @@ public partial class MainWindow : Window
         return true;
     }
 
+    private static string FormatHexPattern(byte[] pattern) =>
+        string.Join(" ", pattern.Select(b => b.ToString("X2", System.Globalization.CultureInfo.InvariantCulture)));
+
     private static bool TryParseOffset(string text, out int offset)
     {
         text = text.Trim();
@@ -894,8 +1080,8 @@ public partial class MainWindow : Window
         SetBrush("TextBrush", "#000000");
         SetBrush("MutedTextBrush", "#333333");
         SetBrush("BorderBrush", "#B8B8B8");
-        SetBrush("GridLineBrush", "#D9D9D9");
-        SetBrush("LightGridLineBrush", "#F1F1F1");
+        SetBrush("GridLineBrush", "#E6E6E6");
+        SetBrush("LightGridLineBrush", "#F6F6F6");
         SetBrush("AddressBackgroundBrush", "#A8A8A8");
         SetBrush("AddressForegroundBrush", "#FFFFFF");
         SetBrush("SplitterBrush", "#D8D8D8");
@@ -913,19 +1099,29 @@ public partial class MainWindow : Window
 
     private void LoadFile_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog
+        try
         {
-            Filter = "Binary files (*.bin;*.rom)|*.bin;*.rom|All files (*.*)|*.*"
-        };
-        if (dialog.ShowDialog(this) != true)
-        {
-            return;
-        }
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Binary files (*.bin;*.rom)|*.bin;*.rom|All files (*.*)|*.*"
+            };
+            if (dialog.ShowDialog(this) != true)
+            {
+                return;
+            }
 
-        _buffer = File.ReadAllBytes(dialog.FileName);
-        RebuildRows();
-        UpdateStatus();
-        AppendLog($"Loaded {dialog.FileName} ({FormatBytes(_buffer.Length)})");
+            _buffer = File.ReadAllBytes(dialog.FileName);
+            _currentOffset = 0;
+            _searchHits.Clear();
+            RebuildRows();
+            UpdateStatus();
+            AppendLog($"Loaded {dialog.FileName} ({FormatBytes(_buffer.Length)})");
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"Open file failed: {ex.Message}");
+            MessageBox.Show(this, ex.Message, "Open file", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void SaveFile_Click(object sender, RoutedEventArgs e)
@@ -1457,11 +1653,16 @@ public sealed record IcCandidate(
 
 public sealed record SizeOption(string Label, int Bytes);
 
-public sealed record SearchResult(bool Found, int Offset, string Message)
+public sealed record SearchResult(bool Found, int Offset, int Length, string Message)
 {
-    public static SearchResult Success(int offset) => new(true, offset, string.Empty);
+    public static SearchResult Success(int offset, int length) => new(true, offset, length, string.Empty);
 
-    public static SearchResult Fail(string message) => new(false, -1, message);
+    public static SearchResult Fail(string message) => new(false, -1, 0, message);
+}
+
+public sealed record SearchHit(int Offset, int Length, string OffsetText, string HexExcerpt, string TextExcerpt)
+{
+    public static SearchHit Message(string message) => new(-1, 0, string.Empty, message, string.Empty);
 }
 
 public sealed class HexRow : INotifyPropertyChanged

@@ -80,6 +80,33 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="RowBackground" Value="{DynamicResource SurfaceBackgroundBrush}"/>
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource AlternateRowBackgroundBrush}"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource LightGridLineBrush}"/>
+            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource LightGridLineBrush}"/>
+        </Style>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource SubtleBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource LightGridLineBrush}"/>
+            <Setter Property="Padding" Value="6,3"/>
+        </Style>
+        <Style TargetType="DataGridCell">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource LightGridLineBrush}"/>
+            <Setter Property="Padding" Value="6,1"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource SelectionBackgroundBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SelectionForegroundBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         <Style TargetType="ComboBox">
             <Setter Property="Height" Value="26"/>
             <Setter Property="Margin" Value="0,3,0,8"/>
@@ -412,6 +439,14 @@
                                     Padding="0"
                                     ToolTip="Find previous"
                                     Click="HexSearchPrevious_Click">‹</Button>
+                            <Button x:Name="HexSearchAllButton"
+                                    DockPanel.Dock="Right"
+                                    Width="34"
+                                    Height="20"
+                                    Margin="2,4,2,4"
+                                    Padding="0"
+                                    ToolTip="Find all matches and log offsets"
+                                    Click="HexSearchAll_Click">All</Button>
                             <ComboBox x:Name="HexSearchModeCombo"
                                       DockPanel.Dock="Right"
                                       Width="82"
@@ -481,42 +516,68 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <StatusBar Grid.Row="0">
-                    <StatusBarItem>
-                        <TextBlock x:Name="SizeStatusText" Text="Size: 0"/>
-                    </StatusBarItem>
-                    <Separator/>
-                    <StatusBarItem>
-                        <ProgressBar x:Name="OperationProgress" Width="210" Height="14" Minimum="0" Maximum="100" Background="{DynamicResource ProgressTrackBrush}"/>
-                    </StatusBarItem>
-                    <StatusBarItem>
-                        <TextBlock x:Name="OperationStatusText" Text="Ready"/>
-                    </StatusBarItem>
-                    <Separator/>
-                    <StatusBarItem>
-                        <StackPanel Orientation="Horizontal">
-                            <Button x:Name="SaveLogButton"
-                                    Height="20"
-                                    Padding="8,0"
-                                    Click="SaveLog_Click">Save log</Button>
-                            <Button x:Name="ClearLogButton"
-                                    Height="20"
-                                    Padding="8,0"
-                                    Click="ClearLog_Click">Clear log</Button>
-                        </StackPanel>
-                    </StatusBarItem>
-                </StatusBar>
+                <Grid Grid.Row="0" Background="{DynamicResource SurfaceBackgroundBrush}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="SizeStatusText" Text="Size: 0" Margin="3,0,8,0"/>
+                        <Separator/>
+                        <ProgressBar x:Name="OperationProgress" Width="210" Height="14" Minimum="0" Maximum="100" Background="{DynamicResource ProgressTrackBrush}" Margin="8,0,4,0"/>
+                        <TextBlock x:Name="OperationStatusText" Text="Ready" Margin="4,0,0,0"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,6,0">
+                        <Button x:Name="SaveLogButton"
+                                Height="20"
+                                Padding="8,0"
+                                Click="SaveLog_Click">Save log</Button>
+                        <Button x:Name="ClearLogButton"
+                                Height="20"
+                                Padding="8,0"
+                                Click="ClearLog_Click">Clear log</Button>
+                    </StackPanel>
+                </Grid>
 
-                <TextBox x:Name="LogBox" Grid.Row="1"
-                         Height="Auto"
-                         Margin="0"
-                         FontFamily="Consolas" FontSize="12"
-                         VerticalScrollBarVisibility="Auto"
-                         HorizontalScrollBarVisibility="Auto"
-                         IsReadOnly="True"
-                         TextWrapping="NoWrap"
-                         Background="{DynamicResource SurfaceBackgroundBrush}"
-                         Foreground="{DynamicResource TextBrush}"/>
+                <TabControl Grid.Row="1">
+                    <TabItem Header="Log">
+                        <TextBox x:Name="LogBox"
+                                 Height="Auto"
+                                 Margin="0"
+                                 FontFamily="Consolas" FontSize="12"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 IsReadOnly="True"
+                                 TextWrapping="NoWrap"
+                                 Background="{DynamicResource SurfaceBackgroundBrush}"
+                                 Foreground="{DynamicResource TextBrush}"/>
+                    </TabItem>
+                    <TabItem Header="Search">
+                        <DataGrid x:Name="SearchHitsGrid"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="None"
+                                  GridLinesVisibility="Vertical"
+                                  SelectionMode="Single"
+                                  MouseDoubleClick="SearchHitsGrid_MouseDoubleClick"
+                                  FontFamily="Consolas"
+                                  FontSize="12"
+                                  RowHeight="22"
+                                  ColumnHeaderHeight="24"
+                                  Background="{DynamicResource SurfaceBackgroundBrush}"
+                                  Foreground="{DynamicResource TextBrush}"
+                                  BorderBrush="{DynamicResource BorderBrush}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Offset" Binding="{Binding OffsetText}" Width="90"/>
+                                <DataGridTextColumn Header="Excerpt (hex)" Binding="{Binding HexExcerpt}" Width="*"/>
+                                <DataGridTextColumn Header="Excerpt (text)" Binding="{Binding TextExcerpt}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </TabItem>
+                </TabControl>
             </Grid>
         </Grid>
     </DockPanel>
