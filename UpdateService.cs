@@ -27,7 +27,7 @@ internal static class UpdateService
         ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
 
         using var client = new HttpClient();
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("CH34xProgrammer");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("MultiFlash");
         client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
 
         using var response = await client.GetAsync(LatestReleaseUrl);
@@ -58,7 +58,7 @@ internal static class UpdateService
         CancellationToken cancellationToken)
     {
         var asset = FindUpdateAsset(release) ?? throw new InvalidOperationException("No ZIP update asset found");
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"ch34x-programmer-update-{Guid.NewGuid():N}");
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"multi-flash-update-{Guid.NewGuid():N}");
         var zipPath = Path.Combine(tempRoot, asset.Name ?? "update.zip");
         var extractPath = Path.Combine(tempRoot, "extracted");
 
@@ -69,7 +69,7 @@ internal static class UpdateService
         {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("CH34xProgrammer");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("MultiFlash");
             using var response = await client.GetAsync(asset.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
 

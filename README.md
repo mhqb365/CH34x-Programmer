@@ -1,6 +1,6 @@
-# CH34x Programmer
+# Multi Flash
 
-CH34x Programmer is a Windows WPF utility for CH341/CH347-based IC programmers and XGecu T48.
+Multi Flash is a Windows WPF utility for CH341/CH347-based IC programmers and XGecu T48.
 It can detect a programmer, search/select SPI NOR flash chips, read/write/verify
 buffers, erase chips, and run simple scripts such as `Read + Verify` and
 `Erase + Write + Verify`.
@@ -27,7 +27,7 @@ directory. Without hardware/DLL access, programmer-dependent actions are disable
 ## Build
 
 ```powershell
-dotnet build "CH34x Programmer.csproj"
+dotnet build "Multi Flash.csproj"
 ```
 
 Output is written to `bin/Debug/net8.0-windows/`.
@@ -35,7 +35,7 @@ Output is written to `bin/Debug/net8.0-windows/`.
 ## Publish
 
 ```powershell
-dotnet publish "CH34x Programmer.csproj" -c Release -r win-x64 --self-contained false
+dotnet publish "Multi Flash.csproj" -c Release -r win-x64 --self-contained false
 ```
 
 Copy any required WCH native DLLs next to the published EXE if they are not

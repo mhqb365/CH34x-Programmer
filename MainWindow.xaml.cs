@@ -15,7 +15,7 @@ namespace Ch34xProgrammer;
 
 public partial class MainWindow : Window
 {
-    private const string AppName = "CH34x Programmer";
+    private const string AppName = "Multi Flash";
     private const string ProjectUrl = "https://github.com/mhqb365/CH34x-Programmer";
     private const int MaxHexPreviewRows = 4096;
     private const int BytesPerHexRow = 16;
@@ -955,7 +955,7 @@ public partial class MainWindow : Window
         var dialog = new SaveFileDialog
         {
             Filter = "Log files (*.log)|*.log|Text files (*.txt)|*.txt|All files (*.*)|*.*",
-            FileName = $"CH34x-Programmer-Log-{DateTime.Now:yyyyMMdd-HHmmss}.log"
+            FileName = $"Multi-Flash-Log-{DateTime.Now:yyyyMMdd-HHmmss}.log"
         };
         if (dialog.ShowDialog(this) != true)
         {

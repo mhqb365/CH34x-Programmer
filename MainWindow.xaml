@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Ch34xProgrammer"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
-        Title="CH34x Programmer" Height="620" Width="960"
+        Title="Multi Flash" Height="620" Width="960"
         MinHeight="620" MinWidth="960"
         FontFamily="Segoe UI" FontSize="13"
         Background="{DynamicResource AppBackgroundBrush}"
