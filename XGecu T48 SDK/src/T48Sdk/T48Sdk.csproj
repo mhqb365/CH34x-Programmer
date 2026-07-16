@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-windows;net10.0-windows</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Platforms>AnyCPU;x64;x86</Platforms>
+    <AssemblyName>T48SDK</AssemblyName>
+    <RootNamespace>T48Sdk</RootNamespace>
+    <Title>XGecu T48 SDK</Title>
+    <Product>XGecu T48 SDK</Product>
+    <Description>Low-level WinUSB SDK foundation for XGecu T48 programmers.</Description>
+  </PropertyGroup>
+</Project>

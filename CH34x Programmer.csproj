@@ -19,4 +19,13 @@
     <Content Include="IntegratedIcCatalog.tsv" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="T48\**\*.cs" />
+    <Compile Remove="XGecu T48 SDK\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="XGecu T48 SDK\src\T48Sdk\T48Sdk.csproj" />
+  </ItemGroup>
+
 </Project>

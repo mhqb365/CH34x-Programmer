@@ -1,13 +1,13 @@
 # CH34x Programmer
 
-CH34x Programmer is a Windows WPF utility for CH341/CH347-based IC programmers.
+CH34x Programmer is a Windows WPF utility for CH341/CH347-based IC programmers and XGecu T48.
 It can detect a programmer, search/select SPI NOR flash chips, read/write/verify
 buffers, erase chips, and run simple scripts such as `Read + Verify` and
 `Erase + Write + Verify`.
 
 ## Features
 
-- CH341 and CH347 programmer detection.
+- CH341, CH347, and XGecu T48 programmer detection.
 - SPI NOR catalog search with JEDEC ID matching.
 - Integrated IC catalog with supported SPI 25xx, I2C 24xx, and flashrom-derived SPI NOR entries.
 - Hex buffer preview/editor.
@@ -18,7 +18,8 @@ buffers, erase chips, and run simple scripts such as `Read + Verify` and
 
 - Windows.
 - .NET 8 SDK to build from source.
-- WCH CH341/CH347 driver and native DLLs for real hardware access.
+- WCH CH341/CH347 driver and native DLLs for CH34x hardware access.
+- XGecu WinUSB driver for T48 hardware access.
 
 The app looks for the native WCH DLLs next to the EXE or in the Windows system
 directory. Without hardware/DLL access, programmer-dependent actions are disabled.

@@ -309,23 +309,40 @@ public partial class MainWindow : Window
         {
             progress.Report(10);
             await Task.Yield();
+            var t48Detected = T48SDKProgrammer.CanOpenDevice();
+            progress.Report(35);
             var ch347Detected = Ch347NativeProgrammer.IsAvailable && Ch347NativeProgrammer.CanOpenDevice();
-            progress.Report(50);
+            progress.Report(65);
             var chDetected = ChNativeProgrammer.IsAvailable && ChNativeProgrammer.CanOpenDevice();
             progress.Report(100);
-            ApplyProgrammerDetection(ch347Detected, chDetected, logWhenChanged: true, forceLog: logLifecycle);
+            ApplyProgrammerDetection(t48Detected, ch347Detected, chDetected, logWhenChanged: true, forceLog: logLifecycle);
         }, logLifecycle: logLifecycle);
 
     private async Task ProbeProgrammerAsync(bool logWhenChanged)
     {
         await Task.Yield();
+        var t48Detected = T48SDKProgrammer.CanOpenDevice();
         var ch347Detected = Ch347NativeProgrammer.IsAvailable && Ch347NativeProgrammer.CanOpenDevice();
         var chDetected = ChNativeProgrammer.IsAvailable && ChNativeProgrammer.CanOpenDevice();
-        ApplyProgrammerDetection(ch347Detected, chDetected, logWhenChanged, forceLog: false);
+        ApplyProgrammerDetection(t48Detected, ch347Detected, chDetected, logWhenChanged, forceLog: false);
     }
 
-    private void ApplyProgrammerDetection(bool ch347Detected, bool chDetected, bool logWhenChanged, bool forceLog)
+    private void ApplyProgrammerDetection(bool t48Detected, bool ch347Detected, bool chDetected, bool logWhenChanged, bool forceLog)
     {
+        if (t48Detected)
+        {
+            var changed = _activeProgrammerKey != "t48";
+            _programmer = new T48SDKProgrammer();
+            _activeProgrammerKey = "t48";
+            HardwareStatusText.Text = "XGecu T48 connected";
+            UpdateProgrammerControls();
+            if (forceLog || changed && logWhenChanged)
+            {
+                AppendLog("XGecu T48 connected. Active backend: XGecu T48 SDK");
+            }
+            return;
+        }
+
         if (ch347Detected)
         {
             var changed = _activeProgrammerKey != "ch347";
@@ -406,7 +423,7 @@ public partial class MainWindow : Window
         }
 
         AppendLog($"{operationName} skipped: no programmer found");
-        MessageBox.Show(this, "No CH341/CH347 programmer found.", operationName, MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show(this, "No XGecu T48/CH341/CH347 programmer found.", operationName, MessageBoxButton.OK, MessageBoxImage.Information);
         return false;
     }
 

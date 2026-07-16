@@ -1,0 +1,6 @@
+bin/
+obj/
+*.log
+*.bin
+__pycache__/
+*.pyc
