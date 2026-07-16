@@ -1196,19 +1196,29 @@ public partial class MainWindow : Window
             if (string.Equals(script, "Read + verify", StringComparison.OrdinalIgnoreCase))
             {
                 AppendLog($"Script request: read and verify {FormatBytes(_buffer.Length)} from 0x{startAddress:X6}");
+                AppendLog("Script stage: read started");
                 _buffer = await _programmer.ReadAsync(chip, startAddress, _buffer.Length, progress);
                 RebuildRows();
                 UpdateStatus();
+                AppendLog("Script stage: read completed");
+                AppendLog("Script stage: verify started");
                 var readOk = await _programmer.VerifyAsync(chip, startAddress, _buffer, progress);
+                AppendLog(readOk ? "Script stage: verify completed OK" : "Script stage: verify failed");
                 AppendLog(readOk ? "Script completed: read + verify OK" : "Script completed: read + verify failed");
                 return;
             }
 
             AppendLog($"Script request: erase, write and verify {FormatBytes(_buffer.Length)} at 0x{startAddress:X6}");
             await UnprotectIfRequestedAsync(chip, progress);
+            AppendLog("Script stage: erase started");
             await _programmer.EraseAsync(chip, progress);
+            AppendLog("Script stage: erase completed");
+            AppendLog("Script stage: write started");
             await _programmer.WriteAsync(chip, startAddress, _buffer, progress, skipBlankPages: true);
+            AppendLog("Script stage: write completed");
+            AppendLog("Script stage: verify started");
             var ok = await _programmer.VerifyAsync(chip, startAddress, _buffer, progress);
+            AppendLog(ok ? "Script stage: verify completed OK" : "Script stage: verify failed");
             AppendLog(ok ? "Script completed: verify OK" : "Script completed: verify failed");
         });
     }
