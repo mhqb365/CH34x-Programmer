@@ -7,10 +7,16 @@
         <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F0F0F0"/>
         <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#EFEFEF"/>
         <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="#E8E8E8"/>
+        <SolidColorBrush x:Key="ToolbarButtonBackgroundBrush" Color="#E8E8E8"/>
+        <SolidColorBrush x:Key="ToolbarButtonBorderBrush" Color="#E8E8E8"/>
         <SolidColorBrush x:Key="SurfaceBackgroundBrush" Color="#FFFFFF"/>
         <SolidColorBrush x:Key="SubtleBackgroundBrush" Color="#F6F6F6"/>
         <SolidColorBrush x:Key="InputBackgroundBrush" Color="#F7F7F7"/>
+        <SolidColorBrush x:Key="ReadOnlyBackgroundBrush" Color="#F7F7F7"/>
         <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#E9F3FF"/>
+        <SolidColorBrush x:Key="PressedBackgroundBrush" Color="#DDEEFF"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#0067C0"/>
+        <SolidColorBrush x:Key="AccentSoftBrush" Color="#E5F1FB"/>
         <SolidColorBrush x:Key="AlternateRowBackgroundBrush" Color="#FBFBFB"/>
         <SolidColorBrush x:Key="TextBrush" Color="#000000"/>
         <SolidColorBrush x:Key="MutedTextBrush" Color="#333333"/>
