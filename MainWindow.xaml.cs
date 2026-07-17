@@ -211,11 +211,6 @@ public partial class MainWindow : Window
 
         await Task.Delay(TimeSpan.FromSeconds(1));
         await ProbeProgrammerAsync(logWhenChanged: true);
-        if (HasProgrammer)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(1));
-            await DetectIcAsync(logLifecycle: false, autoApplySingle: true, openCatalogOnMiss: false);
-        }
 
         _programmerMonitorTimer.Start();
     }
@@ -287,14 +282,9 @@ public partial class MainWindow : Window
         }
 
         _programmerMonitorTimer.Stop();
-        var previousProgrammerKey = _activeProgrammerKey;
         try
         {
             await ProbeProgrammerAsync(logWhenChanged: true);
-            if (previousProgrammerKey == "none" && HasProgrammer)
-            {
-                await DetectIcAsync(logLifecycle: false, autoApplySingle: true, openCatalogOnMiss: false);
-            }
         }
         finally
         {

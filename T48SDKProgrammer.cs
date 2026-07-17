@@ -37,7 +37,7 @@ public sealed class T48SDKProgrammer : IChipProgrammer
         using var device = T48UsbDevice.OpenFirst();
         var spi25 = new T48Spi25Client(device);
         progress.Report(50);
-        var id = spi25.ReadJedecId();
+        var id = ReadValidJedecId(spi25);
         progress.Report(100);
         return new[] { id.ManufacturerId, id.MemoryType, id.CapacityCode };
     });
@@ -48,7 +48,7 @@ public sealed class T48SDKProgrammer : IChipProgrammer
         using var device = T48UsbDevice.OpenFirst();
         var spi25 = new T48Spi25Client(device);
         progress.Report(5);
-        var data = spi25.ReadFlash((uint)startAddress, length, ToSdkProgress(progress));
+        var data = RunT48Operation(() => spi25.ReadFlash((uint)startAddress, length, ToSdkProgress(progress)));
         if (data.Length != length)
         {
             throw new IOException($"XGecu T48 SDK returned {data.Length} byte(s), expected {length} byte(s).");
@@ -72,11 +72,11 @@ public sealed class T48SDKProgrammer : IChipProgrammer
         progress.Report(5);
         if (skipBlankPages)
         {
-            WriteNonBlankPages(spi25, (uint)startAddress, padded, progress);
+            RunT48Operation(() => WriteNonBlankPages(spi25, (uint)startAddress, padded, progress));
         }
         else
         {
-            spi25.WriteFlash((uint)startAddress, padded, ToSdkProgress(progress));
+            RunT48Operation(() => spi25.WriteFlash((uint)startAddress, padded, ToSdkProgress(progress)));
             progress.Report(100);
         }
     });
@@ -100,9 +100,70 @@ public sealed class T48SDKProgrammer : IChipProgrammer
         using var device = T48UsbDevice.OpenFirst();
         var spi25 = new T48Spi25Client(device);
         progress.Report(5);
-        spi25.EraseChip(ToSdkProgress(progress), EstimateEraseDuration(chip));
+        RunT48Operation(() => spi25.EraseChip(ToSdkProgress(progress), EstimateEraseDuration(chip)));
         progress.Report(100);
     });
+
+    private static T48Spi25DeviceId ReadValidJedecId(T48Spi25Client spi25)
+    {
+        try
+        {
+            var id = spi25.ReadJedecId();
+            if (IsPoorContactId(id))
+            {
+                throw PoorContactException($"IC returned invalid JEDEC ID {id.ManufacturerId:X2} {id.MemoryType:X2} {id.CapacityCode:X2}");
+            }
+
+            return id;
+        }
+        catch (T48Exception ex) when (LooksLikePoorContact(ex))
+        {
+            throw PoorContactException(ex.Message, ex);
+        }
+    }
+
+    private static void RunT48Operation(Action operation)
+    {
+        try
+        {
+            operation();
+        }
+        catch (T48Exception ex) when (LooksLikePoorContact(ex))
+        {
+            throw PoorContactException(ex.Message, ex);
+        }
+    }
+
+    private static T RunT48Operation<T>(Func<T> operation)
+    {
+        try
+        {
+            return operation();
+        }
+        catch (T48Exception ex) when (LooksLikePoorContact(ex))
+        {
+            throw PoorContactException(ex.Message, ex);
+        }
+    }
+
+    private static IOException PoorContactException(string detail, Exception? inner = null) =>
+        new("Poor IC contact or wrong chip orientation. Check clip/socket pins, VCC, GND, WP/HOLD, then try Detect IC again. " + detail, inner);
+
+    private static bool IsPoorContactId(T48Spi25DeviceId id)
+    {
+        return id.ManufacturerId == 0x00 && id.MemoryType == 0x00 && id.CapacityCode == 0x00 ||
+               id.ManufacturerId == 0xFF && id.MemoryType == 0xFF && id.CapacityCode == 0xFF ||
+               id.ManufacturerId == 0x03 && id.MemoryType == 0x00;
+    }
+
+    private static bool LooksLikePoorContact(T48Exception ex)
+    {
+        var message = ex.Message;
+        return message.Contains("Read ID response", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("initial probe did not confirm", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("destructive operation readiness", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("erase response", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static void WriteNonBlankPages(T48Spi25Client spi25, uint startAddress, byte[] data, IProgress<int> progress)
     {
