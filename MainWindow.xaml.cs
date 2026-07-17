@@ -310,25 +310,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void Detect_Click(object sender, RoutedEventArgs e)
-    {
-        await DetectProgrammerAsync(logLifecycle: true);
-    }
-
-    private Task DetectProgrammerAsync(bool logLifecycle) =>
-        RunOperationAsync("Detect Programmer", async progress =>
-        {
-            progress.Report(10);
-            await Task.Yield();
-            var t48Detected = T48SDKProgrammer.CanOpenDevice();
-            progress.Report(35);
-            var ch347Detected = Ch347NativeProgrammer.IsAvailable && Ch347NativeProgrammer.CanOpenDevice();
-            progress.Report(65);
-            var chDetected = ChNativeProgrammer.IsAvailable && ChNativeProgrammer.CanOpenDevice();
-            progress.Report(100);
-            ApplyProgrammerDetection(t48Detected, ch347Detected, chDetected, logWhenChanged: true, forceLog: logLifecycle);
-        }, logLifecycle: logLifecycle);
-
     private async Task ProbeProgrammerAsync(bool logWhenChanged)
     {
         await Task.Yield();
@@ -419,9 +400,13 @@ public partial class MainWindow : Window
         ReadIdButton.IsEnabled = enabled;
         ReadIdMenuItem.IsEnabled = enabled;
         ReadButton.IsEnabled = enabled;
+        ReadChipMenuItem.IsEnabled = enabled;
         WriteButton.IsEnabled = enabled;
+        WriteChipMenuItem.IsEnabled = enabled;
         VerifyButton.IsEnabled = enabled;
+        VerifyChipMenuItem.IsEnabled = enabled;
         EraseButton.IsEnabled = enabled;
+        EraseChipMenuItem.IsEnabled = enabled;
         ReadVerifyScriptMenuItem.IsEnabled = enabled;
         EraseWriteVerifyScriptMenuItem.IsEnabled = enabled;
     }

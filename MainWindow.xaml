@@ -292,9 +292,11 @@
             <MenuItem x:Name="IcMenu" Header="_IC">
                 <MenuItem x:Name="SearchIcMenuItem" Header="Search" Click="SearchIc_Click"/>
                 <MenuItem x:Name="ReadIdMenuItem" Header="Detect" Click="ReadId_Click"/>
-            </MenuItem>
-            <MenuItem x:Name="HardwareMenu" Header="_Programmer">
-                <MenuItem x:Name="DetectProgrammerMenuItem" Header="Detect" Click="Detect_Click"/>
+                <Separator/>
+                <MenuItem x:Name="ReadChipMenuItem" Header="Read" Click="ReadChip_Click"/>
+                <MenuItem x:Name="WriteChipMenuItem" Header="Write" Click="WriteChip_Click"/>
+                <MenuItem x:Name="VerifyChipMenuItem" Header="Verify" Click="Verify_Click"/>
+                <MenuItem x:Name="EraseChipMenuItem" Header="Erase" Click="Erase_Click"/>
             </MenuItem>
             <MenuItem x:Name="ScriptsMenu" Header="_Scripts">
                 <MenuItem x:Name="ReadVerifyScriptMenuItem" Header="Read + Verify" Tag="Read + verify" Click="RunScript_Click"/>
@@ -360,8 +362,6 @@
                 <Button x:Name="WriteButton" ToolTip="Write buffer to chip" Click="WriteChip_Click">Write</Button>
                 <Button x:Name="VerifyButton" ToolTip="Verify chip against buffer" Click="Verify_Click">Verify</Button>
                 <Button x:Name="EraseButton" ToolTip="Erase chip" Click="Erase_Click">Erase</Button>
-                <Separator/>
-                <Button x:Name="UsbButton" ToolTip="Detect programmer" Click="Detect_Click">Programmer</Button>
                 <Button x:Name="StopButton" ToolTip="Stop current operation" Click="Stop_Click" Background="{DynamicResource StopBackgroundBrush}" Foreground="{DynamicResource StopForegroundBrush}">STOP</Button>
                 <Separator/>
                 <ToggleButton x:Name="ThemeToggleButton" ToolTip="Toggle dark mode" Checked="ThemeToggleButton_Toggled" Unchecked="ThemeToggleButton_Toggled">Dark</ToggleButton>
