@@ -75,8 +75,8 @@ dotnet build ".\XGecu T48 SDK\XGecu T48 SDK.sln"
 Built DLLs:
 
 ```text
-XGecu T48 SDK\src\T48Sdk\bin\Debug\net8.0-windows\T48Sdk.dll
-XGecu T48 SDK\src\T48Sdk\bin\Debug\net10.0-windows\T48Sdk.dll
+XGecu T48 SDK\src\T48Sdk\bin\Debug\net8.0-windows\T48SDK.dll
+XGecu T48 SDK\src\T48Sdk\bin\Debug\net10.0-windows\T48SDK.dll
 ```
 
 ## Add To Another .NET App
@@ -84,18 +84,18 @@ XGecu T48 SDK\src\T48Sdk\bin\Debug\net10.0-windows\T48Sdk.dll
 Preferred: add a project reference to:
 
 ```text
-XGecu T48 SDK\src\T48Sdk\T48Sdk.csproj
+XGecu T48 SDK\src\T48Sdk\T48SDK.csproj
 ```
 
 Example `.csproj` reference:
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="..\XGecu T48 SDK\src\T48Sdk\T48Sdk.csproj" />
+  <ProjectReference Include="..\XGecu T48 SDK\src\T48Sdk\T48SDK.csproj" />
 </ItemGroup>
 ```
 
-Or reference the built `T48Sdk.dll` directly.
+Or reference the built `T48SDK.dll` directly.
 
 ## Basic API Usage
 

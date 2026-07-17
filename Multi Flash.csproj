@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="XGecu T48 SDK\src\T48Sdk\T48Sdk.csproj" />
+    <ProjectReference Include="XGecu T48 SDK\src\T48Sdk\T48SDK.csproj" />
   </ItemGroup>
 
 </Project>
