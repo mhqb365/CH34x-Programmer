@@ -375,17 +375,23 @@
                 <RowDefinition Height="220" MinHeight="120"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="270"/>
+                <ColumnDefinition Width="250"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <Border Grid.Row="0" Grid.Column="0" Grid.RowSpan="3"
                     Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
                 <StackPanel Margin="8,8,8,0">
-                    <GroupBox x:Name="DeviceGroup" Header="Device" Padding="6" Margin="0,0,0,6">
+                    <GroupBox x:Name="ProgrammerGroup" Header="Programmer" Padding="6" Margin="0,0,0,6">
+                        <TextBlock x:Name="HardwareStatusText"
+                                   Height="20"
+                                   Text="Programmer disconnected"
+                                   Margin="0,2,0,2"/>
+                    </GroupBox>
+
+                    <GroupBox x:Name="DeviceGroup" Header="IC Info" Padding="6" Margin="0,0,0,6">
                         <StackPanel>
-                            <TextBlock x:Name="HardwareStatusText" Text="Programmer disconnected" Margin="0,0,0,5"/>
-                            <TextBox x:Name="DeviceNameBox" Height="20" IsReadOnly="True" Text=""/>
+                            <TextBlock x:Name="DeviceNameBox" Height="20" Text="" />
 
                             <Grid Margin="2,8,2,0">
                                 <Grid.ColumnDefinitions>
@@ -393,10 +399,10 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="26"/>
-                                    <RowDefinition Height="26"/>
-                                    <RowDefinition Height="26"/>
-                                    <RowDefinition Height="32"/>
+                                    <RowDefinition Height="20"/>
+                                    <RowDefinition Height="20"/>
+                                    <RowDefinition Height="20"/>
+                                    <RowDefinition Height="20"/>
                                 </Grid.RowDefinitions>
                                 <TextBlock x:Name="TypeLabel" Grid.Row="0" Grid.Column="0" Text="Type:" VerticalAlignment="Center"/>
                                 <TextBlock x:Name="DeviceTypeText" Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"/>
@@ -406,7 +412,7 @@
                                 <TextBlock x:Name="ManufacturerText" Grid.Row="2" Grid.Column="1" VerticalAlignment="Center"/>
                                 <TextBlock x:Name="SizeLabel" Grid.Row="3" Grid.Column="0" Text="Size:" VerticalAlignment="Center"/>
                                 <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBox x:Name="DeviceSizeBox" Width="104" Height="20" IsReadOnly="True" Text="Chip size"/>
+                                    <TextBlock x:Name="DeviceSizeBox" Width="80" Height="20" Text="Chip size"/>
                                     <TextBlock x:Name="BytesLabel" Text=" Bytes" VerticalAlignment="Center" Margin="8,0,0,0"/>
                                 </StackPanel>
                             </Grid>
@@ -415,7 +421,7 @@
 
                     <GroupBox x:Name="OperationGroup" Header="Operation" Padding="6" Margin="0,0,0,6">
                         <StackPanel>
-                            <TextBlock x:Name="StartAddressLabel" Text="Start address"/>
+                            <TextBlock x:Name="StartAddressLabel" Text="Start address" Height="20"/>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="0x" VerticalAlignment="Center" Margin="0,0,4,7"/>
                                 <TextBox x:Name="StartAddressBox" Width="92" Height="20" Text="000000"/>
@@ -428,7 +434,7 @@
                                       Content="Unprotect chip"
                                       Margin="0,0,0,4"
                                       ToolTip="Clear SPI NOR block-protect bits before write/erase"/>
-                            <TextBlock x:Name="BufferStatusText" Text="Buffer: 0 bytes" Margin="0,5,0,0"/>
+                            <TextBlock x:Name="BufferStatusText" Text="Buffer: 0 bytes" Height="20" Margin="0,5,0,0"/>
                         </StackPanel>
                     </GroupBox>
 
@@ -451,12 +457,12 @@
                             <TextBlock DockPanel.Dock="Left" Text="Hex Editor" FontWeight="SemiBold" Margin="10,0,10,0" VerticalAlignment="Center"/>
                             <Button x:Name="WindowsKeySearchButton"
                                     DockPanel.Dock="Right"
-                                    Width="42"
+                                    Width="62"
                                     Height="20"
                                     Margin="2,4,8,4"
                                     Padding="0"
                                     ToolTip="Find Windows key marker"
-                                    Click="WindowsKeySearch_Click">Key</Button>
+                                    Click="WindowsKeySearch_Click">Win Key</Button>
                             <Button x:Name="HexSearchNextButton"
                                     DockPanel.Dock="Right"
                                     Width="24"
