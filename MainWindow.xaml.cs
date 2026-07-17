@@ -1478,12 +1478,23 @@ public partial class MainWindow : Window
         AddCandidate(list, "93C46", "5V/3.3V", "1 Kbits", "16 Bytes", "GENERIC", "MICROWIRE (CATALOG_ONLY)", "", 128, "Microwire", 16, "93xx");
         AddCandidate(list, "93C86", "5V/3.3V", "16 Kbits", "16 Bytes", "GENERIC", "MICROWIRE (CATALOG_ONLY)", "", 2048, "Microwire", 16, "93xx");
         AddIntegratedIcCatalog(list);
+        AddT48IcCatalog(list);
         return list;
     }
 
     private static void AddIntegratedIcCatalog(List<IcCandidate> list)
     {
-        var catalogPath = FindCatalogFile("IntegratedIcCatalog.tsv");
+        AddTsvIcCatalog(list, "IntegratedIcCatalog.tsv");
+    }
+
+    private static void AddT48IcCatalog(List<IcCandidate> list)
+    {
+        AddTsvIcCatalog(list, "T48IcCatalog.tsv");
+    }
+
+    private static void AddTsvIcCatalog(List<IcCandidate> list, string fileName)
+    {
+        var catalogPath = FindCatalogFile(fileName);
         if (catalogPath is null)
         {
             return;
