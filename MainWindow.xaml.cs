@@ -2085,7 +2085,7 @@ public partial class MainWindow : Window
 
     private static void AddT48IcCatalog(List<IcCandidate> list)
     {
-        AddTsvIcCatalog(list, "T48IcCatalog.tsv");
+        AddTsvIcCatalog(list, "T48ICCatalog.tsv");
     }
 
     private static void AddTsvIcCatalog(List<IcCandidate> list, string fileName)

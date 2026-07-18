@@ -1,4 +1,4 @@
-﻿# T48 IC catalog generated from XGecu T48 SDK/T48_List.txt
+# T48 IC catalog generated from XGecuT48SDK/T48_List.txt
 Device	Manufacturer	RawId	SizeBytes	PageSize	Volts	Protocol	CommandSet	Type	Supported
 S-25A010A	ABLIC		131072	256	3.3	SPI	25xx	SPI_NOR	true
 S-25A020A	ABLIC		262144	256	3.3	SPI	25xx	SPI_NOR	true

@@ -59,7 +59,7 @@ sources so local builds do not require network access.
 ## Project Layout
 
 ```text
-XGecu T48 SDK/
+XGecuT48SDK/
   src/T48Sdk/              Reusable SDK library
   samples/T48Probe/        CLI probe and test tool
   tools/                   USBPcap parsing helpers
@@ -69,14 +69,14 @@ XGecu T48 SDK/
 ## Build
 
 ```powershell
-dotnet build ".\XGecu T48 SDK\XGecu T48 SDK.sln"
+dotnet build ".\XGecuT48SDK\XGecuT48SDK.sln"
 ```
 
 Built DLLs:
 
 ```text
-XGecu T48 SDK\src\T48Sdk\bin\Debug\net8.0-windows\T48SDK.dll
-XGecu T48 SDK\src\T48Sdk\bin\Debug\net10.0-windows\T48SDK.dll
+XGecuT48SDK\src\T48Sdk\bin\Debug\net8.0-windows\T48SDK.dll
+XGecuT48SDK\src\T48Sdk\bin\Debug\net10.0-windows\T48SDK.dll
 ```
 
 ## Add To Another .NET App
@@ -84,14 +84,14 @@ XGecu T48 SDK\src\T48Sdk\bin\Debug\net10.0-windows\T48SDK.dll
 Preferred: add a project reference to:
 
 ```text
-XGecu T48 SDK\src\T48Sdk\T48SDK.csproj
+XGecuT48SDK\src\T48Sdk\T48SDK.csproj
 ```
 
 Example `.csproj` reference:
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="..\XGecu T48 SDK\src\T48Sdk\T48SDK.csproj" />
+  <ProjectReference Include="..\XGecuT48SDK\src\T48Sdk\T48SDK.csproj" />
 </ItemGroup>
 ```
 
@@ -153,62 +153,62 @@ The sample CLI is useful for testing the programmer before integrating the SDK.
 List devices:
 
 ```powershell
-dotnet ".\XGecu T48 SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" list
+dotnet ".\XGecuT48SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" list
 ```
 
 Show endpoints:
 
 ```powershell
-dotnet ".\XGecu T48 SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" pipes
+dotnet ".\XGecuT48SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" pipes
 ```
 
 Read ID:
 
 ```powershell
-dotnet ".\XGecu T48 SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" read-id
+dotnet ".\XGecuT48SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" read-id
 ```
 
 Read 256 bytes:
 
 ```powershell
-dotnet ".\XGecu T48 SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" read-flash 0 256 "XGecu T48 SDK\read-000000.bin"
+dotnet ".\XGecuT48SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" read-flash 0 256 "XGecuT48SDK\read-000000.bin"
 ```
 
 Read full W25Q128, 16 MiB:
 
 ```powershell
-dotnet ".\XGecu T48 SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" read-flash 0 16777216 "XGecu T48 SDK\w25q128-full.bin"
+dotnet ".\XGecuT48SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" read-flash 0 16777216 "XGecuT48SDK\w25q128-full.bin"
 ```
 
 Blank-check full W25Q128:
 
 ```powershell
-dotnet ".\XGecu T48 SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" blank-check 0 16777216 "XGecu T48 SDK\blank.log"
+dotnet ".\XGecuT48SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" blank-check 0 16777216 "XGecuT48SDK\blank.log"
 ```
 
 Erase chip:
 
 ```powershell
-dotnet ".\XGecu T48 SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" erase-chip "XGecu T48 SDK\erase.log"
+dotnet ".\XGecuT48SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" erase-chip "XGecuT48SDK\erase.log"
 ```
 
 Optional smooth erase progress estimate, in seconds:
 
 ```powershell
-dotnet ".\XGecu T48 SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" erase-chip "XGecu T48 SDK\erase.log" 45
+dotnet ".\XGecuT48SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" erase-chip "XGecuT48SDK\erase.log" 45
 ```
 
 Write image:
 
 ```powershell
-dotnet ".\XGecu T48 SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" write-flash 0 "XGecu T48 SDK\w25q128-full.bin" "XGecu T48 SDK\write.log"
+dotnet ".\XGecuT48SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" write-flash 0 "XGecuT48SDK\w25q128-full.bin" "XGecuT48SDK\write.log"
 ```
 
 Verify by readback and binary compare:
 
 ```powershell
-dotnet ".\XGecu T48 SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" read-flash 0 16777216 "XGecu T48 SDK\w25q128-verify-read.bin"
-cmd /c fc /b "XGecu T48 SDK\w25q128-full.bin" "XGecu T48 SDK\w25q128-verify-read.bin"
+dotnet ".\XGecuT48SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" read-flash 0 16777216 "XGecuT48SDK\w25q128-verify-read.bin"
+cmd /c fc /b "XGecuT48SDK\w25q128-full.bin" "XGecuT48SDK\w25q128-verify-read.bin"
 ```
 
 Expected successful compare:
@@ -220,7 +220,7 @@ FC: no differences encountered
 Raw transfer for protocol work:
 
 ```powershell
-dotnet ".\XGecu T48 SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" raw "0501030000000000" 32 t48-usb.log
+dotnet ".\XGecuT48SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" raw "0501030000000000" 32 t48-usb.log
 ```
 
 ## Logs
@@ -231,7 +231,7 @@ records USB direction, pipe, byte count, elapsed time, and payload hex.
 Example:
 
 ```powershell
-dotnet ".\XGecu T48 SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" read-id "XGecu T48 SDK\read-id.log"
+dotnet ".\XGecuT48SDK\samples\T48Probe\bin\Debug\net10.0-windows\T48Probe.dll" read-id "XGecuT48SDK\read-id.log"
 ```
 
 ## Progress
@@ -289,14 +289,14 @@ Or compare hashes:
 Low-level command frames and capture analysis live in:
 
 ```text
-XGecu T48 SDK\PROTOCOL_NOTES.md
+XGecuT48SDK\PROTOCOL_NOTES.md
 ```
 
 USBPcap helper tools:
 
 ```powershell
-python ".\XGecu T48 SDK\tools\parse-usbpcap.py" C:\Users\Windows\Desktop\t48.pcap
-python ".\XGecu T48 SDK\tools\summarize-captures.py"
+python ".\XGecuT48SDK\tools\parse-usbpcap.py" C:\Users\Windows\Desktop\t48.pcap
+python ".\XGecuT48SDK\tools\summarize-captures.py"
 ```
 
 ## Safety

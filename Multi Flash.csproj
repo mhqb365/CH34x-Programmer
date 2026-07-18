@@ -17,16 +17,16 @@
 
   <ItemGroup>
     <Content Include="IntegratedIcCatalog.tsv" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="T48IcCatalog.tsv" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="T48ICCatalog.tsv" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="T48\**\*.cs" />
-    <Compile Remove="XGecu T48 SDK\**\*.cs" />
+    <Compile Remove="XGecuT48SDK\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="XGecu T48 SDK\src\T48Sdk\T48SDK.csproj" />
+    <ProjectReference Include="XGecuT48SDK\src\T48Sdk\T48SDK.csproj" />
   </ItemGroup>
 
 </Project>
