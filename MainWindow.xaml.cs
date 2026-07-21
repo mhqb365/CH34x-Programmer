@@ -422,7 +422,6 @@ public partial class MainWindow : Window
         }
 
         AppendLog($"{operationName} skipped: no programmer found");
-        MessageBox.Show(this, "No XGecu T48/CH341/CH347 programmer found.", operationName, MessageBoxButton.OK, MessageBoxImage.Information);
         return false;
     }
 
@@ -1865,7 +1864,6 @@ public partial class MainWindow : Window
             OperationStatusText.Text = "Error";
             AppendLog($"ERROR after {FormatDuration(stopwatch.Elapsed)}: {ex.Message}");
             PlayOperationSound(name, success: false);
-            MessageBox.Show(this, ex.Message, name, MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -1928,8 +1926,8 @@ public partial class MainWindow : Window
         }
 
         AppendLog(candidates.Count == 1
-            ? $"Detected JEDEC ID: {idText}. One compatible IC profile found"
-            : $"Detected JEDEC ID: {idText}. Multiple compatible IC profiles found. Please select the exact chip marking");
+            ? $"Detected ID: {idText}. One compatible IC profile found"
+            : $"Detected ID: {idText}. Multiple compatible IC profiles found. Please select the exact chip marking");
 
         if (autoApplySingle && candidates.Count == 1)
         {
@@ -2201,14 +2199,6 @@ public partial class MainWindow : Window
     private void UpdateStatus()
     {
         SizeStatusText.Text = $"Size: {_buffer.Length}";
-        var previewBytes = _rows.Count * BytesPerHexRow;
-        if (previewBytes < _buffer.Length)
-        {
-            var previewEnd = Math.Min(_buffer.Length - 1, _previewStartOffset + previewBytes - 1);
-            BufferStatusText.Text = $"Buffer: {FormatBytes(_buffer.Length)} (0x{_previewStartOffset:X6}-0x{previewEnd:X6})";
-            return;
-        }
-
         BufferStatusText.Text = $"Buffer: {FormatBytes(_buffer.Length)}";
     }
 
@@ -2487,10 +2477,12 @@ public sealed class Ch347NativeProgrammer : IChipProgrammer
         while (done < length)
         {
             var count = Math.Min(ReadChunkSize, length - done);
-            var command = new byte[count + 4];
-            WriteAddress(command, 0, 0x03, startAddress + done);
+            var address = startAddress + done;
+            var addressBytes = Uses4ByteAddress(chip, address) ? 4 : 3;
+            var command = new byte[count + 1 + addressBytes];
+            WriteAddress(command, 0, 0x03, 0x13, address, addressBytes);
             var response = SpiTransfer(command);
-            Buffer.BlockCopy(response, 4, result, done, count);
+            Buffer.BlockCopy(response, command.Length - count, result, done, count);
             done += count;
             progress.Report(length == 0 ? 100 : done * 100 / length);
         }
@@ -2525,9 +2517,12 @@ public sealed class Ch347NativeProgrammer : IChipProgrammer
 
             WriteEnable();
 
-            var command = new byte[count + 4];
-            WriteAddress(command, 0, 0x02, startAddress + done);
-            Buffer.BlockCopy(data, done, command, 4, count);
+            var address = startAddress + done;
+            var addressBytes = Uses4ByteAddress(chip, address) ? 4 : 3;
+            var headerLength = 1 + addressBytes;
+            var command = new byte[count + headerLength];
+            WriteAddress(command, 0, 0x02, 0x12, address, addressBytes);
+            Buffer.BlockCopy(data, done, command, headerLength, count);
             SpiTransfer(command);
             await WaitUntilReadyAsync();
 
@@ -2753,13 +2748,25 @@ public sealed class Ch347NativeProgrammer : IChipProgrammer
         throw new TimeoutException("Write timeout. Chip still reports WIP=1.");
     }
 
-    private static void WriteAddress(byte[] buffer, int offset, byte command, int address)
+    private static void WriteAddress(byte[] buffer, int offset, byte command3Byte, byte command4Byte, int address, int addressBytes)
     {
-        buffer[offset] = command;
+        buffer[offset] = addressBytes == 4 ? command4Byte : command3Byte;
+        if (addressBytes == 4)
+        {
+            buffer[offset + 1] = (byte)((address >> 24) & 0xFF);
+            buffer[offset + 2] = (byte)((address >> 16) & 0xFF);
+            buffer[offset + 3] = (byte)((address >> 8) & 0xFF);
+            buffer[offset + 4] = (byte)(address & 0xFF);
+            return;
+        }
+
         buffer[offset + 1] = (byte)((address >> 16) & 0xFF);
         buffer[offset + 2] = (byte)((address >> 8) & 0xFF);
         buffer[offset + 3] = (byte)(address & 0xFF);
     }
+
+    private static bool Uses4ByteAddress(ChipProfile chip, int address) =>
+        chip.SizeBytes > 0x1000000 || address > 0xFFFFFF;
 
     private static bool IsI2c(ChipProfile chip) => string.Equals(chip.Protocol, "I2C", StringComparison.OrdinalIgnoreCase);
 
@@ -2878,10 +2885,12 @@ public sealed class ChNativeProgrammer : IChipProgrammer
         while (done < length)
         {
             var count = Math.Min(ReadChunkSize, length - done);
-            var command = new byte[count + 4];
-            WriteAddress(command, 0, 0x03, startAddress + done);
+            var address = startAddress + done;
+            var addressBytes = Uses4ByteAddress(chip, address) ? 4 : 3;
+            var command = new byte[count + 1 + addressBytes];
+            WriteAddress(command, 0, 0x03, 0x13, address, addressBytes);
             var response = SpiTransfer(command);
-            Buffer.BlockCopy(response, 4, result, done, count);
+            Buffer.BlockCopy(response, command.Length - count, result, done, count);
             done += count;
             progress.Report(length == 0 ? 100 : done * 100 / length);
         }
@@ -2916,9 +2925,12 @@ public sealed class ChNativeProgrammer : IChipProgrammer
 
             WriteEnable();
 
-            var command = new byte[count + 4];
-            WriteAddress(command, 0, 0x02, startAddress + done);
-            Buffer.BlockCopy(data, done, command, 4, count);
+            var address = startAddress + done;
+            var addressBytes = Uses4ByteAddress(chip, address) ? 4 : 3;
+            var headerLength = 1 + addressBytes;
+            var command = new byte[count + headerLength];
+            WriteAddress(command, 0, 0x02, 0x12, address, addressBytes);
+            Buffer.BlockCopy(data, done, command, headerLength, count);
             SpiTransfer(command);
             await WaitUntilReadyAsync();
 
@@ -3150,13 +3162,25 @@ public sealed class ChNativeProgrammer : IChipProgrammer
         throw new TimeoutException("Write timeout. Chip still reports WIP=1.");
     }
 
-    private static void WriteAddress(byte[] buffer, int offset, byte command, int address)
+    private static void WriteAddress(byte[] buffer, int offset, byte command3Byte, byte command4Byte, int address, int addressBytes)
     {
-        buffer[offset] = command;
+        buffer[offset] = addressBytes == 4 ? command4Byte : command3Byte;
+        if (addressBytes == 4)
+        {
+            buffer[offset + 1] = (byte)((address >> 24) & 0xFF);
+            buffer[offset + 2] = (byte)((address >> 16) & 0xFF);
+            buffer[offset + 3] = (byte)((address >> 8) & 0xFF);
+            buffer[offset + 4] = (byte)(address & 0xFF);
+            return;
+        }
+
         buffer[offset + 1] = (byte)((address >> 16) & 0xFF);
         buffer[offset + 2] = (byte)((address >> 8) & 0xFF);
         buffer[offset + 3] = (byte)(address & 0xFF);
     }
+
+    private static bool Uses4ByteAddress(ChipProfile chip, int address) =>
+        chip.SizeBytes > 0x1000000 || address > 0xFFFFFF;
 
     private static bool IsI2c(ChipProfile chip) => string.Equals(chip.Protocol, "I2C", StringComparison.OrdinalIgnoreCase);
 

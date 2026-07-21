@@ -60,7 +60,7 @@ sources so local builds do not require network access.
 
 ```text
 XGecuT48SDK/
-  src/T48Sdk/              Reusable SDK library
+  src/T48SDK/              Reusable SDK library
   samples/T48Probe/        CLI probe and test tool
   tools/                   USBPcap parsing helpers
   PROTOCOL_NOTES.md        Reverse-engineering notes
@@ -75,8 +75,8 @@ dotnet build ".\XGecuT48SDK\XGecuT48SDK.sln"
 Built DLLs:
 
 ```text
-XGecuT48SDK\src\T48Sdk\bin\Debug\net8.0-windows\T48SDK.dll
-XGecuT48SDK\src\T48Sdk\bin\Debug\net10.0-windows\T48SDK.dll
+XGecuT48SDK\src\T48SDK\bin\Debug\net8.0-windows\T48SDK.dll
+XGecuT48SDK\src\T48SDK\bin\Debug\net10.0-windows\T48SDK.dll
 ```
 
 ## Add To Another .NET App
@@ -84,14 +84,14 @@ XGecuT48SDK\src\T48Sdk\bin\Debug\net10.0-windows\T48SDK.dll
 Preferred: add a project reference to:
 
 ```text
-XGecuT48SDK\src\T48Sdk\T48SDK.csproj
+XGecuT48SDK\src\T48SDK\T48SDK.csproj
 ```
 
 Example `.csproj` reference:
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="..\XGecuT48SDK\src\T48Sdk\T48SDK.csproj" />
+  <ProjectReference Include="..\XGecuT48SDK\src\T48SDK\T48SDK.csproj" />
 </ItemGroup>
 ```
 

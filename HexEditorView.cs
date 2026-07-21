@@ -226,6 +226,15 @@ public sealed class HexEditorView : FrameworkElement
 
         _asciiEdit = ascii;
         _pendingNibble = -1;
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+        {
+            MoveCaretTo(offset, extendSelection: true);
+            _isSelecting = true;
+            CaptureMouse();
+            InvalidateVisual();
+            return;
+        }
+
         _selectedOffset = offset;
         _selectionAnchor = offset;
         _selectionEnd = offset;
@@ -300,7 +309,7 @@ public sealed class HexEditorView : FrameworkElement
 
         if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
         {
-            MoveSelection(e.Key);
+            MoveSelection(e.Key, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
             e.Handled = true;
             return;
         }
@@ -393,7 +402,7 @@ public sealed class HexEditorView : FrameworkElement
         ScrollToOffset(_selectedOffset + count - 1);
     }
 
-    private void MoveSelection(Key key)
+    private void MoveSelection(Key key, bool extendSelection)
     {
         var delta = key switch
         {
@@ -403,14 +412,40 @@ public sealed class HexEditorView : FrameworkElement
             Key.Down => BytesPerLine,
             _ => 0
         };
-        MoveBy(delta);
+        MoveBy(delta, extendSelection);
     }
 
-    private void MoveBy(int delta)
+    private void MoveBy(int delta, bool extendSelection = false)
     {
-        ScrollToOffset(Math.Clamp(_selectedOffset + delta, 0, Math.Max(0, _buffer.Length - 1)));
-        _selectionAnchor = _selectedOffset;
-        _selectionEnd = _selectedOffset;
+        MoveCaretTo(Math.Clamp(_selectedOffset + delta, 0, Math.Max(0, _buffer.Length - 1)), extendSelection);
+    }
+
+    private void MoveCaretTo(int offset, bool extendSelection)
+    {
+        if (_buffer.Length == 0)
+        {
+            return;
+        }
+
+        _selectedOffset = Math.Clamp(offset, 0, _buffer.Length - 1);
+        if (extendSelection)
+        {
+            _selectionEnd = _selectedOffset;
+        }
+        else
+        {
+            _selectionAnchor = _selectedOffset;
+            _selectionEnd = _selectedOffset;
+        }
+
+        var line = _selectedOffset / BytesPerLine;
+        var visibleLines = VisibleLines;
+        if (line < _firstLine || line >= _firstLine + visibleLines)
+        {
+            SetFirstLine(Math.Max(0, line - visibleLines / 2));
+        }
+
+        InvalidateVisual();
     }
 
     private void SetByte(int offset, byte value)

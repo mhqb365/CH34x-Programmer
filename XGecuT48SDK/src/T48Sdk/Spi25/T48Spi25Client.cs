@@ -4,13 +4,22 @@ public sealed class T48Spi25Client
 {
     public const int ReadBlockSize = 16 * 1024;
     public const int PageProgramSize = 256;
+    private const int WritePollIntervalPages = 64;
     public static readonly TimeSpan DefaultChipEraseProgressEstimate = TimeSpan.FromSeconds(45);
     public static readonly TimeSpan DefaultEraseResponseTimeout = TimeSpan.FromSeconds(60);
+    public static readonly TimeSpan LargeEraseResponseTimeout = TimeSpan.FromSeconds(120);
 
     private static readonly byte[] ProbeCommand = T48RawFrame.FromHex("3E00300027010700");
     private static readonly byte[] Spi25AlgorithmBlock = T48RawFrame.FromHex(
         "03030200010091010000000188130000000000010001000001000000030000000000000000000000000900880040000001000000000000007842500000000000");
     private static readonly byte[] RunAlgorithmCommand = T48RawFrame.FromHex("3903020001009101");
+    private static readonly byte[] LargeSpi25AlgorithmBlock = T48RawFrame.FromHex(
+        "03030300080291010000000188130000000000020008000001000000030000000000000000000000000900880040000001000000000000007842500000000000");
+    private static readonly byte[] RunLargeAlgorithmCommand = T48RawFrame.FromHex("3903030008029101");
+    private static readonly byte[] LargeReadReadyCommand = T48RawFrame.FromHex("391494010503EF40");
+    private static readonly byte[] LargeEraseReadyCommand = T48RawFrame.FromHex("394C45010503EF40");
+    private static readonly byte[] LargeWriteReadyCommand = T48RawFrame.FromHex("39312E0F0503EF40");
+    private static readonly byte[] OperationPollCommand = T48RawFrame.FromHex("3900000000000000");
     private static readonly byte[] StandaloneReadIdCommand = T48RawFrame.FromHex("0500030000000000");
     private static readonly byte[] OperationReadIdCommand = T48RawFrame.FromHex("0501030000000000");
     private static readonly byte[] CleanupCommand = T48RawFrame.FromHex("0401030000000000");
@@ -42,7 +51,7 @@ public sealed class T48Spi25Client
         return new T48Spi25DeviceId(response[2], response[3], response[4], response);
     }
 
-    public byte[] ReadFlash(uint offset, int length, IProgress<T48Progress>? progress = null)
+    public byte[] ReadFlash(uint offset, int length, IProgress<T48Progress>? progress = null, bool useLargeFlashProfile = false)
     {
         if (length < 0)
         {
@@ -56,7 +65,7 @@ public sealed class T48Spi25Client
         }
 
         progress?.Report(new T48Progress("Read", 0, length, "Preparing SPI25 read"));
-        RunSpi25Setup();
+        RunSpi25Setup(useLargeFlashProfile);
 
         _device.Write(OperationReadIdCommand);
         var idResponse = _device.Read(32);
@@ -65,8 +74,14 @@ public sealed class T48Spi25Client
             throw new T48Exception($"Unexpected SPI25 Read ID response before read: {Convert.ToHexString(idResponse)}");
         }
 
+        if (useLargeFlashProfile)
+        {
+            _device.Write(LargeReadReadyCommand);
+            _device.Read(32);
+        }
+
         _device.Write(T48RawFrame.FromHex("0400000000000000"));
-        RunSpi25Setup();
+        RunSpi25Setup(useLargeFlashProfile);
 
         var alignedOffset = offset / ReadBlockSize * ReadBlockSize;
         var prefixSkip = checked((int)(offset - alignedOffset));
@@ -100,7 +115,7 @@ public sealed class T48Spi25Client
         return result;
     }
 
-    public T48BlankCheckResult BlankCheck(uint offset, int length, IProgress<T48Progress>? progress = null)
+    public T48BlankCheckResult BlankCheck(uint offset, int length, IProgress<T48Progress>? progress = null, bool useLargeFlashProfile = false)
     {
         if (length < 0)
         {
@@ -115,10 +130,10 @@ public sealed class T48Spi25Client
             return new T48BlankCheckResult(true, null, null);
         }
 
-        RunSpi25Setup();
+        RunSpi25Setup(useLargeFlashProfile);
         EnsureReadIdResponse();
         _device.Write(IdleCleanupCommand);
-        RunSpi25Setup();
+        RunSpi25Setup(useLargeFlashProfile);
 
         var alignedOffset = offset / ReadBlockSize * ReadBlockSize;
         var prefixSkip = checked((int)(offset - alignedOffset));
@@ -161,19 +176,25 @@ public sealed class T48Spi25Client
         return new T48BlankCheckResult(true, null, null);
     }
 
-    public void EraseChip(IProgress<T48Progress>? progress = null, TimeSpan? progressEstimate = null)
+    public void EraseChip(IProgress<T48Progress>? progress = null, TimeSpan? progressEstimate = null, bool useLargeFlashProfile = false)
     {
         progress?.Report(new T48Progress("Erase", 0, 100, "Preparing erase"));
-        var setupResponse = RunSpi25Setup();
+        var setupResponse = RunSpi25Setup(useLargeFlashProfile);
         var idResponse = EnsureReadIdResponse();
         EnsureDestructiveProbeReady(setupResponse, idResponse);
+        if (useLargeFlashProfile)
+        {
+            _device.Write(LargeEraseReadyCommand);
+            _device.Read(32);
+        }
+
         _device.Write(IdleCleanupCommand);
-        RunSpi25Setup();
+        RunSpi25Setup(useLargeFlashProfile);
 
         progress?.Report(new T48Progress("Erase", 20, 100, "Erase command sent"));
         _device.Write(EraseChipCommand);
         using var eraseProgress = StartSmoothEraseProgress(progress, progressEstimate ?? DefaultChipEraseProgressEstimate);
-        _device.SetPipeTransferTimeout(0x81, DefaultEraseResponseTimeout);
+        _device.SetPipeTransferTimeout(0x81, useLargeFlashProfile ? LargeEraseResponseTimeout : DefaultEraseResponseTimeout);
         var response = _device.Read(8);
         eraseProgress.Stop();
         if (!IsEraseSuccessResponse(response, idResponse))
@@ -186,7 +207,7 @@ public sealed class T48Spi25Client
         progress?.Report(new T48Progress("Erase", 100, 100, "Erase complete"));
     }
 
-    public void WriteFlash(uint offset, ReadOnlySpan<byte> data, IProgress<T48Progress>? progress = null)
+    public void WriteFlash(uint offset, ReadOnlySpan<byte> data, IProgress<T48Progress>? progress = null, bool useLargeFlashProfile = false)
     {
         if ((offset % PageProgramSize) != 0)
         {
@@ -199,11 +220,17 @@ public sealed class T48Spi25Client
         }
 
         progress?.Report(new T48Progress("Write", 0, data.Length, "Preparing write"));
-        var setupResponse = RunSpi25Setup();
+        var setupResponse = RunSpi25Setup(useLargeFlashProfile);
         var idResponse = EnsureReadIdResponse();
         EnsureDestructiveProbeReady(setupResponse, idResponse);
+        if (useLargeFlashProfile)
+        {
+            _device.Write(LargeWriteReadyCommand);
+            _device.Read(32);
+        }
+
         _device.Write(IdleCleanupCommand);
-        RunSpi25Setup();
+        RunSpi25Setup(useLargeFlashProfile);
 
         _device.Write(BeginWriteCommand);
 
@@ -213,26 +240,31 @@ public sealed class T48Spi25Client
             _device.Write(CreateWritePageCommand(address));
             _device.Write(0x02, data.Slice(written, PageProgramSize));
 
-            if (written == 0)
+            var pageIndex = written / PageProgramSize;
+            if (pageIndex % WritePollIntervalPages == 0)
             {
-                _device.Write(T48RawFrame.FromHex("3900000000000000"));
+                _device.Write(OperationPollCommand);
                 _device.Read(32);
             }
 
-            progress?.Report(new T48Progress("Write", written + PageProgramSize, data.Length, $"Wrote page at 0x{address:X6}"));
+            var completed = written + PageProgramSize;
+            var reported = completed == data.Length ? Math.Max(0, data.Length - 1) : completed;
+            progress?.Report(new T48Progress("Write", reported, data.Length, $"Wrote page at 0x{address:X6}"));
         }
 
+        _device.Write(OperationPollCommand);
+        _device.Read(32);
         _device.Write(IdleCleanupCommand);
         progress?.Report(new T48Progress("Write", data.Length, data.Length, "Write complete"));
     }
 
-    private byte[] RunSpi25Setup()
+    private byte[] RunSpi25Setup(bool useLargeFlashProfile = false)
     {
         _device.Write(ProbeCommand);
         var probeResponse = _device.Read(16);
 
-        _device.Write(Spi25AlgorithmBlock);
-        _device.Write(RunAlgorithmCommand);
+        _device.Write(useLargeFlashProfile ? LargeSpi25AlgorithmBlock : Spi25AlgorithmBlock);
+        _device.Write(useLargeFlashProfile ? RunLargeAlgorithmCommand : RunAlgorithmCommand);
         _device.Read(32);
         return probeResponse;
     }
@@ -255,6 +287,7 @@ public sealed class T48Spi25Client
         command[4] = (byte)(address & 0xFF);
         command[5] = (byte)((address >> 8) & 0xFF);
         command[6] = (byte)((address >> 16) & 0xFF);
+        command[7] = (byte)((address >> 24) & 0xFF);
         return command;
     }
 
@@ -264,6 +297,7 @@ public sealed class T48Spi25Client
         command[4] = (byte)(address & 0xFF);
         command[5] = (byte)((address >> 8) & 0xFF);
         command[6] = (byte)((address >> 16) & 0xFF);
+        command[7] = (byte)((address >> 24) & 0xFF);
         return command;
     }
 

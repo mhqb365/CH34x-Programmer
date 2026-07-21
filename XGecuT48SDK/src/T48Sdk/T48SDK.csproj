@@ -6,7 +6,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Platforms>AnyCPU;x64;x86</Platforms>
     <AssemblyName>T48SDK</AssemblyName>
-    <RootNamespace>T48Sdk</RootNamespace>
+    <RootNamespace>T48SDK</RootNamespace>
+    <DebugType>None</DebugType>
+    <DebugSymbols>false</DebugSymbols>
     <Title>XGecu T48 SDK</Title>
     <Product>XGecu T48 SDK</Product>
     <Description>Low-level WinUSB SDK foundation for XGecu T48 programmers.</Description>
