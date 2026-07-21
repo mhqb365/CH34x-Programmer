@@ -29,6 +29,11 @@ public partial class MainWindow : Window
         0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x1D, 0x00, 0x00, 0x00
     ];
+    private static readonly byte[] XgproMetadataMarker =
+    [
+        0x2D, 0x43, 0x6F, 0x6E, 0x66, 0x69, 0x67, 0x75,
+        0x72, 0x61, 0x74, 0x69, 0x6F, 0x6E, 0x2D, 0x00
+    ];
     private static readonly Dictionary<string, string> KnownWindowsKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         ["7H3HT-N36VD-XK866-8RV8Y-39M6M"] = "Win 10 RTM Core OEM:DM, EULA OEM",
@@ -1434,6 +1439,29 @@ public partial class MainWindow : Window
         return -1;
     }
 
+    private static byte[] StripXgproMetadata(byte[] buffer, out int markerOffset, out int removedBytes)
+    {
+        markerOffset = -1;
+        removedBytes = 0;
+
+        var lastPossibleOffset = buffer.Length - XgproMetadataMarker.Length;
+        if (lastPossibleOffset < 0)
+        {
+            return buffer;
+        }
+
+        markerOffset = FindBytes(buffer, XgproMetadataMarker, lastPossibleOffset, forward: false);
+        if (markerOffset < 0)
+        {
+            return buffer;
+        }
+
+        removedBytes = buffer.Length - markerOffset;
+        var trimmed = new byte[markerOffset];
+        Buffer.BlockCopy(buffer, 0, trimmed, 0, markerOffset);
+        return trimmed;
+    }
+
     private static List<int> FindAllBytes(byte[] buffer, byte[] pattern)
     {
         var offsets = new List<int>();
@@ -1677,17 +1705,62 @@ public partial class MainWindow : Window
                 return;
             }
 
-            _buffer = File.ReadAllBytes(dialog.FileName);
-            _currentOffset = 0;
-            _searchHits.Clear();
-            RebuildRows();
-            UpdateStatus();
-            AppendLog($"Loaded {dialog.FileName} ({FormatBytes(_buffer.Length)})");
+            LoadBufferFromFile(dialog.FileName);
         }
         catch (Exception ex)
         {
             AppendLog($"Open file failed: {ex.Message}");
             MessageBox.Show(this, ex.Message, "Open file", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void HexEditor_DragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop)
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void HexEditor_Drop(object sender, DragEventArgs e)
+    {
+        try
+        {
+            if (e.Data.GetData(DataFormats.FileDrop) is not string[] files || files.Length == 0)
+            {
+                return;
+            }
+
+            var file = files.FirstOrDefault(File.Exists);
+            if (file is null)
+            {
+                AppendLog("Drop ignored: no file found");
+                return;
+            }
+
+            LoadBufferFromFile(file);
+            if (files.Length > 1)
+            {
+                AppendLog($"Drop loaded first file; ignored {files.Length - 1} other file(s)");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"Drop file failed: {ex.Message}");
+        }
+    }
+
+    private void LoadBufferFromFile(string fileName)
+    {
+        _buffer = StripXgproMetadata(File.ReadAllBytes(fileName), out var markerOffset, out var removedBytes);
+        _currentOffset = 0;
+        _searchHits.Clear();
+        RebuildRows();
+        UpdateStatus();
+        AppendLog($"Loaded {fileName} ({FormatBytes(_buffer.Length)})");
+        if (removedBytes > 0)
+        {
+            AppendLog($"Removed XGecu metadata: {removedBytes} bytes from 0x{markerOffset:X6} to EOF");
         }
     }
 

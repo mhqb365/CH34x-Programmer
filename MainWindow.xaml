@@ -590,10 +590,18 @@
                                 Key</Button>
                             <Button x:Name="HexSearchNextButton" DockPanel.Dock="Right" Width="24"
                                 Height="20" Margin="2,4,2,4" Padding="0" ToolTip="Find next"
-                                Click="HexSearchNext_Click">⮞</Button>
+                                Click="HexSearchNext_Click">
+                                <Path Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource TextBrush}"
+                                    StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                    StrokeLineJoin="Round" Data="M9,6 L15,12 L9,18"/>
+                            </Button>
                             <Button x:Name="HexSearchPreviousButton" DockPanel.Dock="Right"
                                 Width="24" Height="20" Margin="2,4,2,4" Padding="0"
-                                ToolTip="Find previous" Click="HexSearchPrevious_Click">⮜</Button>
+                                ToolTip="Find previous" Click="HexSearchPrevious_Click">
+                                <Path Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource TextBrush}"
+                                    StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                    StrokeLineJoin="Round" Data="M15,6 L9,12 L15,18"/>
+                            </Button>
                             <Button x:Name="HexReplaceButton" DockPanel.Dock="Right" Width="64"
                                 Height="20" Margin="2,4,2,4" Padding="0"
                                 ToolTip="Open replace dialog" Click="HexReplace_Click">Replace</Button>
@@ -623,7 +631,9 @@
                                 TextChanged="HexSearchBox_TextChanged" Text="" />
                         </DockPanel>
 
-                        <Grid Grid.Row="1">
+                        <Grid Grid.Row="1" AllowDrop="True"
+                            PreviewDragOver="HexEditor_DragOver"
+                            Drop="HexEditor_Drop">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="18" />
