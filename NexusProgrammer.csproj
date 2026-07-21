@@ -3,12 +3,12 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <AssemblyName>Multi Flash</AssemblyName>
-    <Product>Multi Flash</Product>
+    <AssemblyName>NexusProgrammer</AssemblyName>
+    <Product>NexusProgrammer</Product>
     <Authors>mhqb365</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/mhqb365/Multi-Flash</RepositoryUrl>
-    <Version>1.0.1</Version>
+    <RepositoryUrl>https://github.com/mhqb365/NexusProgrammer</RepositoryUrl>
+    <Version>1.1.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <DebugType>None</DebugType>
     <DebugSymbols>false</DebugSymbols>

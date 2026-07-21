@@ -1,4 +1,4 @@
-﻿<Window x:Class="Ch34xProgrammer.SearchIcWindow"
+<Window x:Class="NexusProgrammer.SearchIcWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Search IC" Width="680" Height="500"

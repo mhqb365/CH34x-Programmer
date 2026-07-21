@@ -9,11 +9,11 @@ using System.Runtime.Serialization.Json;
 using System.Text.RegularExpressions;
 using System.Windows;
 
-namespace Ch34xProgrammer;
+namespace NexusProgrammer;
 
 internal static class UpdateService
 {
-    private const string LatestReleaseUrl = "https://api.github.com/repos/mhqb365/CH34x-Programmer/releases/latest";
+    private const string LatestReleaseUrl = "https://api.github.com/repos/mhqb365/NexusProgrammer/releases/latest";
 
     public static Version CurrentVersion => ParseVersion(
         Assembly.GetExecutingAssembly()
@@ -27,7 +27,7 @@ internal static class UpdateService
         ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
 
         using var client = new HttpClient();
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("MultiFlash");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("NexusProgrammer");
         client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
 
         using var response = await client.GetAsync(LatestReleaseUrl);
@@ -69,7 +69,7 @@ internal static class UpdateService
         {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("MultiFlash");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("NexusProgrammer");
             using var response = await client.GetAsync(asset.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
 

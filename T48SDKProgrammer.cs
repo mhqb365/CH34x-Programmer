@@ -2,7 +2,7 @@ using System.IO;
 using T48Sdk;
 using T48Sdk.Spi25;
 
-namespace Ch34xProgrammer;
+namespace NexusProgrammer;
 
 public sealed class T48SDKProgrammer : IChipProgrammer
 {

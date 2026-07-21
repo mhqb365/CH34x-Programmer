@@ -1,8 +1,8 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
 
-namespace Ch34xProgrammer;
+namespace NexusProgrammer;
 
 public partial class SearchIcWindow : Window
 {

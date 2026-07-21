@@ -1,9 +1,10 @@
-﻿<Window x:Class="Ch34xProgrammer.MainWindow"
+<Window x:Class="NexusProgrammer.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="clr-namespace:Ch34xProgrammer"
+    xmlns:local="clr-namespace:NexusProgrammer"
     xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
-    xmlns:sys="clr-namespace:System;assembly=mscorlib" Title="Multi Flash" Height="620" Width="960"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib" Title="NexusProgrammer" Height="620"
+    Width="960"
     MinHeight="620" MinWidth="960" FontFamily="Segoe UI" FontSize="13"
     Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource TextBrush}">
     <Window.Resources>
@@ -347,7 +348,8 @@
                     </Style>
                     <Style TargetType="Path">
                         <Setter Property="Fill" Value="Transparent" />
-                        <Setter Property="Stroke" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type primitives:ButtonBase}}}" />
+                        <Setter Property="Stroke"
+                            Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type primitives:ButtonBase}}}" />
                         <Setter Property="StrokeThickness" Value="2" />
                         <Setter Property="StrokeStartLineCap" Value="Round" />
                         <Setter Property="StrokeEndLineCap" Value="Round" />
@@ -367,7 +369,8 @@
                     <Viewbox Width="18" Height="18">
                         <Canvas Width="24" Height="24">
                             <Path Data="M14 3v4a1 1 0 0 0 1 1h4" />
-                            <Path Data="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z" />
+                            <Path
+                                Data="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z" />
                             <Path Data="M12 11v6" />
                             <Path Data="M9 14h6" />
                         </Canvas>
@@ -376,7 +379,8 @@
                 <Button x:Name="OpenButton" ToolTip="Open binary file" Click="LoadFile_Click">
                     <Viewbox Width="18" Height="18">
                         <Canvas Width="24" Height="24">
-                            <Path Data="M5 19l2.6-9.2A2 2 0 0 1 9.5 8H20a1 1 0 0 1 1 1.3L18.6 18a2 2 0 0 1-1.9 1.4H5z" />
+                            <Path
+                                Data="M5 19l2.6-9.2A2 2 0 0 1 9.5 8H20a1 1 0 0 1 1 1.3L18.6 18a2 2 0 0 1-1.9 1.4H5z" />
                             <Path Data="M5 19V6a2 2 0 0 1 2-2h4l2 2h4a2 2 0 0 1 2 2" />
                         </Canvas>
                     </Viewbox>
@@ -440,14 +444,16 @@
                     <Viewbox Width="18" Height="18">
                         <Canvas Width="24" Height="24">
                             <Path Data="M9 12l2 2l4-4" />
-                            <Path Data="M4 4m0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+                            <Path
+                                Data="M4 4m0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
                         </Canvas>
                     </Viewbox>
                 </Button>
                 <Button x:Name="EraseButton" ToolTip="Erase chip" Click="Erase_Click">
                     <Viewbox Width="18" Height="18">
                         <Canvas Width="24" Height="24">
-                            <Path Data="M19 20h-10.5l-4.21-4.3a1 1 0 0 1 0-1.41l10-10a1 1 0 0 1 1.41 0l5 5a1 1 0 0 1 0 1.41L11.5 20" />
+                            <Path
+                                Data="M19 20h-10.5l-4.21-4.3a1 1 0 0 1 0-1.41l10-10a1 1 0 0 1 1.41 0l5 5a1 1 0 0 1 0 1.41L11.5 20" />
                             <Path Data="M18 13.3L11.7 7" />
                         </Canvas>
                     </Viewbox>
@@ -497,7 +503,8 @@
 
                     <GroupBox x:Name="DeviceGroup" Header="IC Info" Padding="6" Margin="0,0,0,6">
                         <StackPanel>
-                            <TextBlock x:Name="DeviceNameBox" Height="20" FontWeight="SemiBold" Text="" />
+                            <TextBlock x:Name="DeviceNameBox" Height="20" FontWeight="SemiBold"
+                                Text="" />
 
                             <Grid Margin="2,6,2,0">
                                 <Grid.ColumnDefinitions>
@@ -583,10 +590,10 @@
                                 Key</Button>
                             <Button x:Name="HexSearchNextButton" DockPanel.Dock="Right" Width="24"
                                 Height="20" Margin="2,4,2,4" Padding="0" ToolTip="Find next"
-                                Click="HexSearchNext_Click">›</Button>
+                                Click="HexSearchNext_Click">⮞</Button>
                             <Button x:Name="HexSearchPreviousButton" DockPanel.Dock="Right"
                                 Width="24" Height="20" Margin="2,4,2,4" Padding="0"
-                                ToolTip="Find previous" Click="HexSearchPrevious_Click">‹</Button>
+                                ToolTip="Find previous" Click="HexSearchPrevious_Click">⮜</Button>
                             <Button x:Name="HexReplaceButton" DockPanel.Dock="Right" Width="64"
                                 Height="20" Margin="2,4,2,4" Padding="0"
                                 ToolTip="Open replace dialog" Click="HexReplace_Click">Replace</Button>
@@ -609,7 +616,7 @@
                             </ComboBox>
                             <Button x:Name="HexSearchClearButton" DockPanel.Dock="Right" Width="24"
                                 Height="20" Margin="4,4,0,4" Padding="0" Visibility="Collapsed"
-                                ToolTip="Clear search" Click="HexSearchClear_Click">×</Button>
+                                ToolTip="Clear search" Click="HexSearchClear_Click">🗙</Button>
                             <TextBox x:Name="HexSearchBox" Height="20" Margin="0,4,0,4"
                                 ToolTip="Hex/Text finds an offset. Offset mode opens that page for editing."
                                 KeyDown="HexSearchBox_KeyDown"

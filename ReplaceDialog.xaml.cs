@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 
-namespace Ch34xProgrammer;
+namespace NexusProgrammer;
 
 public partial class ReplaceDialog : Window
 {

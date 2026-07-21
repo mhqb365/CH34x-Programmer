@@ -1,6 +1,6 @@
-# Multi Flash
+# NexusProgrammer
 
-Multi Flash is a Windows WPF utility for CH341/CH347-based IC programmers and XGecu T48.
+NexusProgrammer is a Windows WPF utility for CH341/CH347-based IC programmers and XGecu T48.
 It can detect a programmer, search/select SPI NOR flash chips, read/write/verify
 buffers, erase chips, and run simple scripts such as `Read + Verify` and
 `Erase + Write + Verify`.
@@ -18,7 +18,7 @@ buffers, erase chips, and run simple scripts such as `Read + Verify` and
 
 - Windows.
 - .NET 8 SDK to build from source.
-- WCH CH341/CH347 driver and native DLLs for CH34x hardware access.
+- WCH CH341/CH347 driver and native DLLs for programmer hardware access.
 - XGecu WinUSB driver for T48 hardware access.
 
 The app looks for the native WCH DLLs next to the EXE or in the Windows system
@@ -27,7 +27,7 @@ directory. Without hardware/DLL access, programmer-dependent actions are disable
 ## Build
 
 ```powershell
-dotnet build "Multi Flash.csproj"
+dotnet build "NexusProgrammer.csproj"
 ```
 
 Output is written to `bin/Debug/net8.0-windows/`.
@@ -35,7 +35,7 @@ Output is written to `bin/Debug/net8.0-windows/`.
 ## Publish
 
 ```powershell
-dotnet publish "Multi Flash.csproj" -c Release -r win-x64 --self-contained false
+dotnet publish "NexusProgrammer.csproj" -c Release -r win-x64 --self-contained false
 ```
 
 Copy any required WCH native DLLs next to the published EXE if they are not

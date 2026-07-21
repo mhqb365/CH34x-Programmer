@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -12,12 +12,12 @@ using System.Windows;
 using System.Windows.Threading;
 using System.Windows.Media;
 
-namespace Ch34xProgrammer;
+namespace NexusProgrammer;
 
 public partial class MainWindow : Window
 {
-    private const string AppName = "Multi Flash";
-    private const string ProjectUrl = "https://github.com/mhqb365/Multi-Flash";
+    private const string AppName = "NexusProgrammer";
+    private const string ProjectUrl = "https://github.com/mhqb365/NexusProgrammer";
     private const int MaxHexPreviewRows = 4096;
     private const int BytesPerHexRow = 16;
     private const int SearchHitContextBytes = 16;
@@ -73,7 +73,7 @@ public partial class MainWindow : Window
 
     private readonly List<IcCandidate> _icCatalog = [];
     private readonly DispatcherTimer _programmerMonitorTimer = new() { Interval = TimeSpan.FromSeconds(2) };
-    private IChipProgrammer _programmer = new MockCh34xProgrammer();
+    private IChipProgrammer _programmer = new MockProgrammer();
     private string _activeProgrammerKey = "none";
     private byte[] _buffer = [];
     private int _previewStartOffset;
@@ -367,7 +367,7 @@ public partial class MainWindow : Window
         }
 
         var wasConnected = _activeProgrammerKey != "none";
-        _programmer = new MockCh34xProgrammer();
+        _programmer = new MockProgrammer();
         _activeProgrammerKey = "none";
         HardwareStatusText.Text = "Programmer disconnected";
         UpdateProgrammerControls();
@@ -395,7 +395,7 @@ public partial class MainWindow : Window
             ShowChipSelectionForId(id, autoApplySingle, openCatalogOnMiss);
         }, logLifecycle: logLifecycle);
 
-    private bool HasProgrammer => _programmer is not MockCh34xProgrammer;
+    private bool HasProgrammer => _programmer is not MockProgrammer;
 
     private void UpdateProgrammerControls()
     {
@@ -1718,7 +1718,7 @@ public partial class MainWindow : Window
         var dialog = new SaveFileDialog
         {
             Filter = "Log files (*.log)|*.log|Text files (*.txt)|*.txt|All files (*.*)|*.*",
-            FileName = $"Multi-Flash-Log-{DateTime.Now:yyyyMMdd-HHmmss}.log"
+            FileName = $"NexusProgrammer-Log-{DateTime.Now:yyyyMMdd-HHmmss}.log"
         };
         if (dialog.ShowDialog(this) != true)
         {
@@ -3220,7 +3220,7 @@ public sealed class ChNativeProgrammer : IChipProgrammer
     }
 }
 
-public sealed class MockCh34xProgrammer : IChipProgrammer
+public sealed class MockProgrammer : IChipProgrammer
 {
     public string Name => "mock CH341";
 
